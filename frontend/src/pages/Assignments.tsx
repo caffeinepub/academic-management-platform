@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { useGetAllTasks, useCreateTask, useMarkTaskAsCompleted } from '../hooks/useQueries';
+import { useGetAllTasks, useCreateTask, useMarkTaskCompleted } from '../hooks/useQueries';
 import TaskModal, { type TaskFormData } from '../components/TaskModal';
 import type { Task } from '../backend';
 
@@ -56,7 +56,7 @@ function nsToDateString(ns: bigint): string {
 export default function Assignments() {
   const { data: tasks = [], isLoading } = useGetAllTasks();
   const createTask = useCreateTask();
-  const markCompleted = useMarkTaskAsCompleted();
+  const markCompleted = useMarkTaskCompleted();
 
   const [filter, setFilter] = useState<FilterType>('all');
   const [modalOpen, setModalOpen] = useState(false);

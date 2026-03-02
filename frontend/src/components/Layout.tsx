@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import Sidebar from './Sidebar';
+import ThemeToggle from './ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 
@@ -35,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-2">
             <img
               src="/assets/generated/logo-mark.dim_128x128.png"
               alt="AcadMind"
@@ -43,7 +44,14 @@ export default function Layout({ children }: LayoutProps) {
             />
             <span className="font-display font-bold text-foreground">AcadMind</span>
           </div>
+          {/* Theme toggle — visible on mobile header */}
+          <ThemeToggle />
         </header>
+
+        {/* Desktop top-right theme toggle */}
+        <div className="hidden lg:flex absolute top-3 right-4 z-10">
+          <ThemeToggle />
+        </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto scrollbar-thin">
@@ -53,13 +61,13 @@ export default function Layout({ children }: LayoutProps) {
         {/* Footer */}
         <footer className="border-t border-border bg-card px-6 py-3">
           <p className="text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} AcadMind. Built with{' '}
+            © {new Date().getFullYear()} AcadMind &mdash; Built with{' '}
             <span className="text-destructive">♥</span> using{' '}
             <a
               href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== 'undefined' ? window.location.hostname : 'acadmind')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
+              className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
               caffeine.ai
             </a>

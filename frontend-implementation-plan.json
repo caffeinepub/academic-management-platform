@@ -1,45 +1,57 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Chat.tsx: Route Gemini calls directly via @google/genai SDK instead of ICP canister",
+  "title": "Add light/dark theme toggle and OCR 'Coming Soon' message",
   "requirements": [
     {
-      "id": "REQ-25",
-      "summary": "Replace ICP canister-routed Gemini calls in Chat.tsx with direct @google/genai SDK integration using user's stored API key",
+      "id": "REQ-39",
+      "summary": "Add a light/dark theme toggle button in the app header that persists user preference and works with existing ThemeProvider",
       "acceptanceCriteria": [
-        "Chat.tsx no longer calls any ICP actor method (e.g., sendMessage) for AI responses",
-        "Gemini API calls are made directly from the frontend using @google/genai SDK with GoogleGenAI instantiated with the user's geminiApiKey",
-        "Model used is exactly 'gemini-2.5-flash'",
-        "The IC0508 canister-stopped error no longer appears when sending a chat message",
-        "System prompt is dynamically built from the user's timetable slots and tasks",
-        "If geminiApiKey is absent from UserContext, an inline message prompts the user to add their key in the sidebar",
-        "Chat UI remains intact: scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, and formatted responses all work correctly"
+        "A theme toggle button (sun/moon icon) is visible in the top-right corner of the app on all pages",
+        "Clicking the button switches the app between light and dark themes",
+        "The active theme is persisted in localStorage under 'acadmind_theme'",
+        "On page reload, the previously selected theme is restored automatically",
+        "Dark mode applies the dark CSS custom properties defined in frontend/src/index.css consistently across all pages and components",
+        "The toggle button itself is styled to remain visible and accessible in both light and dark themes"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/geminiChat.ts",
-          "operation": "modify",
-          "description": "Remove any ICP actor method calls for Gemini API and replace with direct @google/genai SDK integration. Import GoogleGenAI from '@google/genai', accept geminiApiKey as a parameter, instantiate GoogleGenAI with the key, build system prompt dynamically from timetable slots and tasks, and call ai.models.generateContent with model 'gemini-2.5-flash' and the user query plus conversation history. Return the AI-generated text response. This utility should handle API errors gracefully and return appropriate error messages."
+          "path": "frontend/src/components/ThemeToggle.tsx",
+          "operation": "create",
+          "description": "Create a new ThemeToggle component that renders a button with sun/moon icons (using lucide-react icons). The component reads the current theme from a theme context or hook, toggles between 'light' and 'dark' on click, persists the selection to localStorage under key 'acadmind_theme', and updates the document root element's class or data attribute to trigger CSS custom property changes. Style the button to remain visible in both themes using appropriate foreground/background tokens from frontend/src/index.css."
         },
         {
-          "path": "frontend/src/pages/Chat.tsx",
+          "path": "frontend/src/contexts/ThemeContext.tsx",
+          "operation": "create",
+          "description": "Create a ThemeContext and ThemeProvider that manages theme state ('light' or 'dark'), reads the initial theme from localStorage key 'acadmind_theme' (defaulting to 'light' if not set), applies the theme to the document root element (via className or dataset), and exposes a toggleTheme function and current theme value via a useTheme hook. Ensure the provider initializes theme on mount and synchronizes with localStorage on every change."
+        },
+        {
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Update the chat message sending flow to call the modified geminiChat utility with the user's geminiApiKey from UserContext. Remove any calls to sendMessage or other ICP actor methods for AI responses. Add conditional rendering: if geminiApiKey is absent, display an inline message prompting the user to add their key in the sidebar settings. Ensure the typing indicator shows during API calls, preserve the existing chat UI (scrollable history, Send button, Enter-to-send, Clear Chat button, formatted responses), and handle API errors by displaying them in the chat interface."
+          "description": "Wrap the existing app tree with the new ThemeProvider from frontend/src/contexts/ThemeContext.tsx, placing it at the outermost level (inside QueryClientProvider and InternetIdentityProvider but outside the Router). Ensure the ThemeProvider is active before any UI renders so the theme is applied immediately on load."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Import and render the ThemeToggle component in the top-right area of the header section, positioned next to or above the hamburger menu button. Ensure the toggle button is visible on all pages and styled to remain accessible in both light and dark themes. Adjust layout/spacing as needed to accommodate the new button without disrupting existing navigation elements."
         }
       ]
     },
     {
-      "id": "REQ-26",
-      "summary": "Add @google/genai as a dependency in frontend/package.json to enable import resolution",
+      "id": "REQ-40",
+      "summary": "Replace negative/error OCR result text with a 'Coming Soon' message on the TimetableUpload page",
       "acceptanceCriteria": [
-        "@google/genai appears in the dependencies section of frontend/package.json",
-        "The frontend build completes without 'Cannot find module @google/genai' errors"
+        "When the user clicks the 'Extract Timetable' button on the OCR Upload page, no 'No' or negative error text is shown",
+        "Instead, a 'Coming Soon' message is displayed inline in the result area",
+        "The 'Coming Soon' message is clearly readable and styled consistently with the app theme",
+        "The loading spinner (if shown) still appears briefly before the 'Coming Soon' message is displayed",
+        "No other functionality on the TimetableUpload page is altered"
       ],
       "file_operations": [
         {
-          "path": "frontend/package.json",
+          "path": "frontend/src/pages/TimetableUpload.tsx",
           "operation": "modify",
-          "description": "Add '@google/genai' to the dependencies section with an appropriate version (e.g., '^0.21.0' or latest stable). Ensure it is placed in the dependencies object, not devDependencies, so the import statement in Chat.tsx and geminiChat.ts resolves correctly during build and runtime."
+          "description": "Locate the code that handles the OCR extraction result (likely after calling mockOcr or displaying an error) and replace any negative/error message text (e.g., 'No', 'Failed', or error strings) with a clearly styled 'Coming Soon' message. Display this message inline in the result area where the extracted slots or error would normally appear. Preserve the loading spinner behavior and ensure the 'Coming Soon' text is styled using theme-aware Tailwind classes (e.g., text-foreground, bg-muted) so it remains visible in both light and dark modes. Do not alter file upload, slot editing, or save functionality."
         }
       ]
     }

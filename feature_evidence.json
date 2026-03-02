@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-in-frontend-src-pages-chat-tsx-remove-any-code-that-routes-gemini-api-calls-through-the-icp-backend-canister-sendmessage-or-any-actor-method-instead-call-the-gemini-2-5-flash-model-directly-from-the-frontend-using-the-google-genai-sdk-import-googlegenai-from-google-genai-instantiate-with-new-googlegenai-apikey-geminiapikey-and-call-ai-models-generatecontent-model-gemini-2-5-flash-contents-userquery-use-the-user-s-stored-geminiapikey-from-usercontext-build-the-system-prompt-dynamically-from-the-user-s-current-timetable-slots-and-tasks-fetched-via-existing-react-query-hooks-if-no-api-key-is-stored-display-an-inline-prompt-directing-the-user-to-add-their-key-in-the-sidebar-preserve-the-existing-chat-ui-scrollable-history-send-button-enter-to-send-typing-indicator-clear-chat-button-formatted-responses",
-      "featureTitle": "In frontend/src/pages/Chat.tsx, remove any code that routes Gemini API calls through the ICP backend canister (sendMessage or any actor method). Instead, call the Gemini 2.5 Flash model directly from the frontend using the @google/genai SDK: import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }). Use the user's stored geminiApiKey from UserContext. Build the system prompt dynamically from the user's current timetable slots and tasks fetched via existing React Query hooks. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "featureId": "feature-add-a-light-dark-theme-toggle-button-in-the-top-right-area-of-the-app-header-visible-on-all-pages-that-allows-users-to-switch-between-light-white-and-dark-themes-the-toggle-should-display-an-appropriate-sun-moon-icon-persist-the-user-s-theme-preference-in-localstorage-under-the-key-acadmind-theme-so-it-is-restored-on-next-visit-wire-the-toggle-to-the-existing-themeprovider-in-app-tsx-and-the-css-custom-properties-already-defined-in-frontend-src-index-css-for-light-and-dark-modes",
+      "featureTitle": "Add a light/dark theme toggle button in the top-right area of the app header (visible on all pages) that allows users to switch between light (white) and dark themes. The toggle should display an appropriate sun/moon icon. Persist the user's theme preference in localStorage under the key 'acadmind_theme' so it is restored on next visit. Wire the toggle to the existing ThemeProvider in App.tsx and the CSS custom properties already defined in frontend/src/index.css for light and dark modes.",
       "files": [
-        "frontend/src/pages/Chat.tsx"
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/components/ThemeToggle.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -15,7 +16,25 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-25"
+        "REQ-39"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-frontend-src-pages-timetableupload-tsx-replace-any-text-or-error-message-that-currently-displays-no-or-a-negative-error-response-when-the-user-clicks-the-extract-timetable-ocr-button-with-a-clearly-styled-coming-soon-message-the-message-should-inform-the-user-that-this-feature-is-not-yet-available-displayed-inline-where-the-result-would-normally-appear-do-not-show-any-error-or-no-text-in-this-context",
+      "featureTitle": "In frontend/src/pages/TimetableUpload.tsx, replace any text or error message that currently displays 'No' (or a negative/error response) when the user clicks the 'Extract Timetable' / OCR button with a clearly styled 'Coming Soon' message. The message should inform the user that this feature is not yet available, displayed inline where the result would normally appear. Do not show any error or 'No' text in this context.",
+      "files": [
+        "frontend/src/pages/TimetableUpload.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-40"
       ],
       "confidence": "high"
     }

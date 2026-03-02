@@ -1,468 +1,422 @@
-import { useState, useMemo } from 'react';
-import {
-  Plus,
-  Trash2,
-  Edit2,
-  CalendarDays,
-  Loader2,
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+// frontend/src/pages/DayTracker.tsx
+import React, { useState, useMemo } from 'react';
+import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { Plus, ChevronLeft, ChevronRight, Clock, BookOpen, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import {
-  useGetDayEntries,
-  useAddDayEntry,
-  useUpdateDayEntry,
-  useDeleteDayEntry,
-} from '../hooks/useQueries';
-import type { DayEntry } from '../backend';
+import { useGetDayEntries, useAddDayEntry, useUpdateDayEntry, useDeleteDayEntry } from '@/hooks/useQueries';
 
-const USER_ID = 'default-user';
-
-function dateToInt(date: Date): bigint {
-  // Store as start-of-day UTC ms as bigint
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return BigInt(d.getTime());
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface LocalDayEntry {
+  id: string;
+  date: string;       // ISO date string "YYYY-MM-DD"
+  hours: number;
+  description?: string;
+  completed: boolean;
 }
 
-function intToDate(val: bigint): Date {
-  return new Date(Number(val));
-}
-
-function formatDisplayDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatShortDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function getWeekDays(anchor: Date): Date[] {
-  const day = anchor.getDay(); // 0=Sun
-  const monday = new Date(anchor);
-  monday.setDate(anchor.getDate() - ((day + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
+// ─── EntryModal ───────────────────────────────────────────────────────────────
 interface EntryModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  date: Date;
-  entry?: DayEntry | null;
-  onSave: (description: string) => Promise<void>;
-  isSaving: boolean;
+  onClose: () => void;
+  onSave: (hours: number, description: string) => void;
+  initialHours?: number;
+  initialDescription?: string;
+  isEditing?: boolean;
+  isSaving?: boolean;
 }
 
-function EntryModal({ open, onOpenChange, date, entry, onSave, isSaving }: EntryModalProps) {
-  const [description, setDescription] = useState(entry?.taskDescription ?? '');
+function EntryModal({ open, onClose, onSave, initialHours = 1, initialDescription = '', isEditing = false, isSaving = false }: EntryModalProps) {
+  const [hours, setHours] = useState(initialHours);
+  const [description, setDescription] = useState(initialDescription);
 
-  // Reset when entry changes
-  useState(() => {
-    setDescription(entry?.taskDescription ?? '');
-  });
+  React.useEffect(() => {
+    if (open) {
+      setHours(initialHours);
+      setDescription(initialDescription);
+    }
+  }, [open, initialHours, initialDescription]);
 
-  const handleSave = async () => {
-    if (!description.trim()) return;
-    await onSave(description.trim());
-    setDescription('');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hours <= 0 || hours > 24) {
+      toast.error('Hours must be between 0.1 and 24');
+      return;
+    }
+    onSave(hours, description);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!isSaving) { onOpenChange(o); if (!o) setDescription(entry?.taskDescription ?? ''); } }}>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display">
-            {entry ? 'Edit Entry' : 'Add Entry'}
-          </DialogTitle>
-          <DialogDescription>
-            {formatDisplayDate(date)}
-          </DialogDescription>
+          <DialogTitle>{isEditing ? 'Edit Entry' : 'Log Learning Hours'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <Label htmlFor="entry-desc">What did you work on?</Label>
-            <Textarea
-              id="entry-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your tasks, study sessions, or activities for this day..."
-              rows={4}
-              className="resize-none"
+            <Label htmlFor="hours">Hours Spent</Label>
+            <Input
+              id="hours"
+              type="number"
+              min="0.1"
+              max="24"
+              step="0.1"
+              value={hours}
+              onChange={(e) => setHours(parseFloat(e.target.value) || 0)}
+              required
             />
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!description.trim() || isSaving} className="gap-2">
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {entry ? 'Update' : 'Add Entry'}
-          </Button>
-        </DialogFooter>
+          <div className="space-y-1.5">
+            <Label htmlFor="desc">
+              Activity / Description{' '}
+              <span className="text-muted-foreground text-xs">(optional)</span>
+            </Label>
+            <Textarea
+              id="desc"
+              placeholder="What did you study or work on?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (isEditing ? 'Saving…' : 'Logging…') : isEditing ? 'Save Changes' : 'Log Hours'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-export default function DayTracker() {
-  const today = new Date();
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
-  const [weekAnchor, setWeekAnchor] = useState<Date>(today);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<DayEntry | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DayEntry | null>(null);
-  const [savingEntry, setSavingEntry] = useState(false);
+// ─── DailySummary ─────────────────────────────────────────────────────────────
+interface DailySummaryProps {
+  entries: LocalDayEntry[];
+  date: Date;
+}
 
-  const { data: entries = [], isLoading } = useGetDayEntries(USER_ID);
+function DailySummary({ entries, date }: DailySummaryProps) {
+  const totalHours = useMemo(() => entries.reduce((sum, e) => sum + e.hours, 0), [entries]);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold text-primary flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Daily Summary — {format(date, 'EEEE, MMM d')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Total learning time</span>
+          <Badge variant="default" className="font-mono">{totalHours.toFixed(1)}h</Badge>
+        </div>
+        {entries.filter(e => e.description).map(e => (
+          <div key={e.id} className="flex items-start gap-2 text-sm">
+            <BookOpen className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+            <span className="text-muted-foreground">
+              {e.description}{' '}
+              <span className="text-foreground font-medium">({e.hours}h)</span>
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Entry Card ───────────────────────────────────────────────────────────────
+interface EntryCardProps {
+  entry: LocalDayEntry;
+  onEdit: (entry: LocalDayEntry) => void;
+  onDelete: (id: string) => void;
+  isDeleting: boolean;
+}
+
+function EntryCard({ entry, onEdit, onDelete, isDeleting }: EntryCardProps) {
+  return (
+    <Card>
+      <CardContent className="py-3 px-4 flex items-start gap-3">
+        <Badge variant="secondary" className="font-mono shrink-0 mt-0.5">
+          {entry.hours.toFixed(1)}h
+        </Badge>
+        <div className="flex-1 min-w-0">
+          {entry.description ? (
+            <p className="text-sm text-foreground leading-snug">{entry.description}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No description</p>
+          )}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit(entry)}
+            title="Edit entry"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(entry.id)}
+            disabled={isDeleting}
+            title="Delete entry"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function DayTracker() {
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<LocalDayEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { data: entries = [] } = useGetDayEntries();
   const addEntry = useAddDayEntry();
   const updateEntry = useUpdateDayEntry();
   const deleteEntry = useDeleteDayEntry();
 
-  const weekDays = useMemo(() => getWeekDays(weekAnchor), [weekAnchor]);
-
-  // Map date int -> entries
-  const entriesByDate = useMemo(() => {
-    const map = new Map<string, DayEntry[]>();
-    for (const entry of entries) {
-      const d = intToDate(entry.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(entry);
-    }
-    return map;
-  }, [entries]);
-
-  const getEntriesForDate = (date: Date): DayEntry[] => {
-    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-    return entriesByDate.get(key) ?? [];
-  };
-
-  const selectedEntries = getEntriesForDate(selectedDate);
-
-  const handleSave = async (description: string) => {
-    setSavingEntry(true);
-    try {
-      if (editingEntry) {
-        await updateEntry.mutateAsync({ entryId: editingEntry.id, newDescription: description });
-        toast.success('Entry updated');
-      } else {
-        await addEntry.mutateAsync({
-          userId: USER_ID,
-          date: dateToInt(selectedDate),
-          taskDescription: description,
-        });
-        toast.success('Entry added');
-      }
-      setModalOpen(false);
-      setEditingEntry(null);
-    } catch {
-      toast.error('Failed to save entry');
-    } finally {
-      setSavingEntry(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await deleteEntry.mutateAsync(deleteTarget.id);
-      toast.success('Entry deleted');
-    } catch {
-      toast.error('Failed to delete entry');
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
-
-  const prevWeek = () => {
-    const d = new Date(weekAnchor);
-    d.setDate(d.getDate() - 7);
-    setWeekAnchor(d);
-  };
-
-  const nextWeek = () => {
-    const d = new Date(weekAnchor);
-    d.setDate(d.getDate() + 7);
-    setWeekAnchor(d);
-  };
-
-  const goToToday = () => {
-    setWeekAnchor(today);
-    setSelectedDate(today);
-  };
-
-  const totalEntries = entries.length;
-  const thisWeekEntries = weekDays.reduce(
-    (sum, d) => sum + getEntriesForDate(d).length,
-    0
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)),
+    [currentWeekStart]
   );
 
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  const selectedEntries = useMemo(
+    () => entries.filter((e) => e.date === selectedDateStr),
+    [entries, selectedDateStr]
+  );
+
+  const weeklyHours = useMemo(() => {
+    const map: Record<string, number> = {};
+    weekDays.forEach((d) => {
+      const key = format(d, 'yyyy-MM-dd');
+      map[key] = entries.filter((e) => e.date === key).reduce((s, e) => s + e.hours, 0);
+    });
+    return map;
+  }, [entries, weekDays]);
+
+  const openAddModal = () => {
+    setEditingEntry(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (entry: LocalDayEntry) => {
+    setEditingEntry(entry);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingEntry(null);
+  };
+
+  const handleSave = (hours: number, description: string) => {
+    if (editingEntry) {
+      updateEntry.mutate(
+        { id: editingEntry.id, hours, description },
+        {
+          onSuccess: () => {
+            toast.success('Entry updated');
+            closeModal();
+          },
+          onError: () => toast.error('Failed to update entry'),
+        }
+      );
+    } else {
+      addEntry.mutate(
+        { date: selectedDateStr, hours, description },
+        {
+          onSuccess: () => {
+            toast.success('Hours logged!');
+            closeModal();
+          },
+          onError: () => toast.error('Failed to log hours'),
+        }
+      );
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    deleteEntry.mutate(deleteTarget, {
+      onSuccess: () => {
+        toast.success('Entry deleted');
+        setDeleteTarget(null);
+      },
+      onError: () => toast.error('Failed to delete entry'),
+    });
+  };
+
+  const isSaving = addEntry.isPending || updateEntry.isPending;
+
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Day Tracker</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Log and review your daily activities
-          </p>
+          <h1 className="text-2xl font-bold font-display">Day Tracker</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Log your daily learning hours</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingEntry(null);
-            setModalOpen(true);
-          }}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Entry
+        <Button onClick={openAddModal} size="sm" className="gap-1.5">
+          <Plus className="h-4 w-4" /> Log Hours
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground mb-1">Total Entries</p>
-          <p className="font-display text-2xl font-bold text-foreground">{totalEntries}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-          <p className="text-xs text-muted-foreground mb-1">This Week</p>
-          <p className="font-display text-2xl font-bold text-foreground">{thisWeekEntries}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 shadow-xs col-span-2 sm:col-span-1">
-          <p className="text-xs text-muted-foreground mb-1">Today</p>
-          <p className="font-display text-2xl font-bold text-foreground">
-            {getEntriesForDate(today).length}
-          </p>
-        </div>
-      </div>
-
       {/* Week Navigator */}
-      <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            <span className="font-display font-semibold text-sm text-foreground">
-              Week of {formatShortDate(weekDays[0])} – {formatShortDate(weekDays[6])}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevWeek}>
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentWeekStart((d) => addDays(d, -7))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={goToToday}>
-              Today
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextWeek}>
+            <span className="text-sm font-medium">
+              {format(currentWeekStart, 'MMM d')} – {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentWeekStart((d) => addDays(d, 7))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+          <div className="grid grid-cols-7 gap-1">
+            {weekDays.map((day) => {
+              const key = format(day, 'yyyy-MM-dd');
+              const hrs = weeklyHours[key] || 0;
+              const isSelected = isSameDay(day, selectedDate);
+              const isToday = isSameDay(day, new Date());
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedDate(day)}
+                  className={`flex flex-col items-center rounded-lg py-2 px-1 text-xs transition-colors ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground'
+                      : isToday
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  <span className="font-medium">{format(day, 'EEE')}</span>
+                  <span className="text-[10px] opacity-70">{format(day, 'd')}</span>
+                  {hrs > 0 && (
+                    <span
+                      className={`mt-1 text-[10px] font-semibold ${
+                        isSelected ? 'text-primary-foreground' : 'text-primary'
+                      }`}
+                    >
+                      {hrs.toFixed(1)}h
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-7">
-          {weekDays.map((day) => {
-            const dayEntries = getEntriesForDate(day);
-            const isToday = isSameDay(day, today);
-            const isSelected = isSameDay(day, selectedDate);
-            const hasEntries = dayEntries.length > 0;
-
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center gap-1 py-3 px-1 text-center transition-colors border-r border-border last:border-r-0 ${
-                  isSelected
-                    ? 'bg-primary text-primary-foreground'
-                    : isToday
-                    ? 'bg-primary/10 text-primary'
-                    : 'hover:bg-muted/50 text-foreground'
-                }`}
-              >
-                <span className="text-xs font-medium uppercase tracking-wide opacity-70">
-                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                </span>
-                <span className={`font-display text-lg font-bold leading-none ${isSelected ? 'text-primary-foreground' : ''}`}>
-                  {day.getDate()}
-                </span>
-                {hasEntries && (
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      isSelected ? 'bg-primary-foreground' : 'bg-primary'
-                    }`}
-                  />
-                )}
-                {!hasEntries && <span className="h-1.5 w-1.5" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Day Entries */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display font-semibold text-foreground">
-            {isSameDay(selectedDate, today) ? "Today's Entries" : formatDisplayDate(selectedDate)}
+      {/* Entry List */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            {format(selectedDate, 'EEEE, MMMM d')}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => {
-              setEditingEntry(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add
-          </Button>
+          <span className="text-xs text-muted-foreground">
+            {selectedEntries.length} entr{selectedEntries.length === 1 ? 'y' : 'ies'}
+          </span>
         </div>
 
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : selectedEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 py-12 text-center">
-            <BookOpen className="h-10 w-10 text-muted-foreground/40 mb-2" />
-            <p className="text-sm font-medium text-muted-foreground">No entries for this day</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5 mb-3">
-              Track what you worked on to build a study log
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                setEditingEntry(null);
-                setModalOpen(true);
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Entry
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {selectedEntries.map((entry) => (
-              <div
-                key={String(entry.id)}
-                className="group flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-xs hover:shadow-card transition-all"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <BookOpen className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                    {entry.taskDescription}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDisplayDate(intToDate(entry.date))}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    onClick={() => {
-                      setEditingEntry(entry);
-                      setModalOpen(true);
-                    }}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(entry)}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+        {selectedEntries.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-10 flex flex-col items-center gap-3 text-center">
+              <Clock className="h-8 w-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">No entries for this day</p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">
+                  Click "Log Hours" to add your first entry
+                </p>
               </div>
-            ))}
-            <div className="flex justify-end">
-              <Badge variant="secondary" className="text-xs">
-                {selectedEntries.length} {selectedEntries.length === 1 ? 'entry' : 'entries'}
-              </Badge>
-            </div>
-          </div>
+              <Button size="sm" variant="outline" onClick={openAddModal}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Entry
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          selectedEntries.map((entry) => (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              onEdit={openEditModal}
+              onDelete={(id) => setDeleteTarget(id)}
+              isDeleting={deleteEntry.isPending && deleteTarget === entry.id}
+            />
+          ))
         )}
       </div>
+
+      {/* Daily Summary */}
+      <DailySummary entries={selectedEntries} date={selectedDate} />
 
       {/* Entry Modal */}
       <EntryModal
         open={modalOpen}
-        onOpenChange={(open) => {
-          setModalOpen(open);
-          if (!open) setEditingEntry(null);
-        }}
-        date={selectedDate}
-        entry={editingEntry}
+        onClose={closeModal}
         onSave={handleSave}
-        isSaving={savingEntry}
+        initialHours={editingEntry?.hours ?? 1}
+        initialDescription={editingEntry?.description ?? ''}
+        isEditing={!!editingEntry}
+        isSaving={isSaving}
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Entry</AlertDialogTitle>
+            <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this entry? This action cannot be undone.
+              This will permanently remove this learning entry. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteEntry.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+              disabled={deleteEntry.isPending}
             >
-              Delete
+              {deleteEntry.isPending ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

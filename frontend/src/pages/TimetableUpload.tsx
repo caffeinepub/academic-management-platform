@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Loader2, Save, RefreshCw, CheckCircle2, X } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, Save, RefreshCw, CheckCircle2, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { mockExtractTimetable, timeStringToMinutes, type ExtractedSlot } from '../utils/mockOcr';
+import { timeStringToMinutes, type ExtractedSlot } from '../utils/mockOcr';
 import { useCreateSlot } from '../hooks/useQueries';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -22,6 +22,7 @@ export default function TimetableUpload() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(false);
   const [extractedSlots, setExtractedSlots] = useState<ExtractedSlot[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -35,6 +36,7 @@ export default function TimetableUpload() {
     }
     setImageFile(file);
     setExtractedSlots([]);
+    setShowComingSoon(false);
     setSaved(false);
     const url = URL.createObjectURL(file);
     setImagePreview(url);
@@ -53,15 +55,11 @@ export default function TimetableUpload() {
   const handleExtract = async () => {
     if (!imageFile) return;
     setExtracting(true);
-    try {
-      const slots = await mockExtractTimetable(imageFile);
-      setExtractedSlots(slots);
-      toast.success(`Extracted ${slots.length} slots from your timetable`);
-    } catch {
-      toast.error('Extraction failed. Please try again.');
-    } finally {
-      setExtracting(false);
-    }
+    setShowComingSoon(false);
+    // Simulate a brief loading delay before showing "Coming Soon"
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    setExtracting(false);
+    setShowComingSoon(true);
   };
 
   const handleSlotChange = (index: number, field: keyof ExtractedSlot, value: string | number) => {
@@ -102,6 +100,7 @@ export default function TimetableUpload() {
     setImageFile(null);
     setImagePreview(null);
     setExtractedSlots([]);
+    setShowComingSoon(false);
     setSaved(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -192,7 +191,7 @@ export default function TimetableUpload() {
           )}
         </div>
 
-        {/* Extracted Slots */}
+        {/* Extracted Slots / Coming Soon */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display font-semibold text-foreground">2. Review & Edit</h2>
@@ -201,7 +200,22 @@ export default function TimetableUpload() {
             )}
           </div>
 
-          {extractedSlots.length === 0 ? (
+          {showComingSoon ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-12 text-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <p className="font-display font-bold text-foreground text-lg mb-1">Coming Soon</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Automatic OCR extraction is under development. Stay tuned — it'll be available soon!
+                </p>
+              </div>
+              <Badge variant="outline" className="text-primary border-primary/40">
+                🚀 In Development
+              </Badge>
+            </div>
+          ) : extractedSlots.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 p-12 text-center">
               <ImageIcon className="h-10 w-10 text-muted-foreground/40 mb-3" />
               <p className="text-sm text-muted-foreground">

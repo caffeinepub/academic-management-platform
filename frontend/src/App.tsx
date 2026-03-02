@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
@@ -9,6 +10,7 @@ import TimetableUpload from './pages/TimetableUpload';
 import TimetableManual from './pages/TimetableManual';
 import Assignments from './pages/Assignments';
 import DayTracker from './pages/DayTracker';
+import InstallBanner from './components/InstallBanner';
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -71,12 +73,31 @@ declare module '@tanstack/react-router' {
   }
 }
 
+function ServiceWorkerRegistrar() {
+  useEffect(() => {
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.info('Service Worker registered:', registration.scope);
+        })
+        .catch((error) => {
+          console.warn('Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <UserProvider>
+        <ServiceWorkerRegistrar />
         <RouterProvider router={router} />
         <Toaster richColors position="top-right" />
+        <InstallBanner />
       </UserProvider>
     </ThemeProvider>
   );

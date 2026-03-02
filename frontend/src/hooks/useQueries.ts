@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import type { TimetableSlot, Task, ChatMessage, DayEntry } from '../backend';
+import type { TimetableSlot, Task, ChatMessage } from '../backend';
 
 // ─── Timetable Slots ────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ export function useCreateTask() {
   });
 }
 
-export function useMarkTaskAsCompleted() {
+export function useMarkTaskCompleted() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
@@ -102,7 +102,7 @@ export function useMarkTaskAsCompleted() {
   });
 }
 
-// ─── Chat ────────────────────────────────────────────────────────────────────
+// ─── Chat Messages ────────────────────────────────────────────────────────────
 
 export function useGetAllMessages() {
   const { actor, isFetching } = useActor();
@@ -130,74 +130,96 @@ export function useSendMessage() {
   });
 }
 
-// ─── Day Tracker ─────────────────────────────────────────────────────────────
+// ─── Day Tracker (localStorage) ──────────────────────────────────────────────
 
-export function useGetDayEntries(userId: string) {
-  const { actor, isFetching } = useActor();
-  return useQuery<DayEntry[]>({
-    queryKey: ['dayEntries', userId],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getDayEntries(userId);
-    },
-    enabled: !!actor && !isFetching,
-  });
+const LS_KEY = 'acadmind_day_entries';
+
+export interface LocalDayEntry {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  hours: number;
+  description: string;
+  completed: boolean;
 }
 
-export function useGetDayEntriesByRange(userId: string, startDate: bigint, endDate: bigint) {
-  const { actor, isFetching } = useActor();
-  return useQuery<DayEntry[]>({
-    queryKey: ['dayEntries', userId, 'range', String(startDate), String(endDate)],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getDayEntriesByRange(userId, startDate, endDate);
-    },
-    enabled: !!actor && !isFetching,
+function loadEntries(): LocalDayEntry[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Migrate old entries that may have taskDescription instead of hours/description
+    return parsed.map((e: Record<string, unknown>) => ({
+      id: String(e.id ?? Math.random()),
+      date: String(e.date ?? ''),
+      hours: typeof e.hours === 'number' ? e.hours : 0,
+      description: typeof e.description === 'string' ? e.description : (typeof e.taskDescription === 'string' ? e.taskDescription : ''),
+      completed: Boolean(e.completed ?? false),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function saveEntries(entries: LocalDayEntry[]): void {
+  localStorage.setItem(LS_KEY, JSON.stringify(entries));
+}
+
+export function useGetDayEntries() {
+  return useQuery<LocalDayEntry[]>({
+    queryKey: ['day-entries'],
+    queryFn: () => loadEntries(),
+    staleTime: 0,
   });
 }
 
 export function useAddDayEntry() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (params: {
-      userId: string;
-      date: bigint;
-      taskDescription: string;
-    }) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.addDayEntry(params.userId, params.date, params.taskDescription);
+    mutationFn: async (params: { date: string; hours: number; description: string }) => {
+      const entries = loadEntries();
+      const newEntry: LocalDayEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        date: params.date,
+        hours: params.hours,
+        description: params.description,
+        completed: false,
+      };
+      saveEntries([...entries, newEntry]);
+      return newEntry;
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['dayEntries', variables.userId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
     },
   });
 }
 
 export function useUpdateDayEntry() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { entryId: bigint; newDescription: string }) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.updateDayEntry(params.entryId, params.newDescription);
+    mutationFn: async (params: { id: string; hours: number; description: string }) => {
+      const entries = loadEntries();
+      const updated = entries.map((e) =>
+        e.id === params.id ? { ...e, hours: params.hours, description: params.description } : e
+      );
+      saveEntries(updated);
+      return updated.find((e) => e.id === params.id)!;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dayEntries'] });
+      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
     },
   });
 }
 
 export function useDeleteDayEntry() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (entryId: bigint) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.deleteDayEntry(entryId);
+    mutationFn: async (id: string) => {
+      const entries = loadEntries();
+      saveEntries(entries.filter((e) => e.id !== id));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dayEntries'] });
+      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
     },
   });
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 15,
-  "summary": "A student-focused intelligent academic management web platform with five core modules: AI Chat System (Gemini 2.5 Flash), OCR-Based Timetable Extraction (Gemini-powered), Manual Timetable Slot Management, Quiz & Assignment Tracking, and Day Tracker. Includes user authentication via name/email with per-user Gemini API key storage in Supabase (academic_users table). Dashboard shows today's schedule, upcoming tasks, and quick-access navigation. Desktop-first, responsive, minimalistic professional design. Backend uses Supabase for all data persistence.",
+  "projectStateVersion": 27,
+  "summary": "A student-focused intelligent academic management web platform with five core modules: AI Chat System (Gemini 2.5 Flash), OCR-Based Timetable Extraction (Gemini-powered), Manual Timetable Slot Management, Quiz & Assignment Tracking, and Day Tracker. Includes user authentication via name/email with per-user Gemini API key storage in Supabase (academic_users table). Dashboard shows today's schedule, upcoming tasks, and quick-access navigation. Desktop-first, responsive, minimalistic professional design. Backend uses Supabase for all data persistence. PWA (Progressive Web App) support planned so users can install the app on mobile and use it offline.",
   "architectural_notes": [
     "Sidebar or top navigation for clear module access (Chat, Timetable, Assignments, Dashboard)",
     "Desktop-first responsive layout with mobile compatibility",
@@ -10,13 +10,15 @@
     "Supabase is used as the primary database; academic_users table stores user id, name (unique email) for authentication and per-user Gemini API key storage",
     "Gemini 2.5 Flash powers two separate features: AI Chat (with timetable/assignment context) and OCR timetable extraction — each uses a dedicated backend endpoint",
     "Per-user Gemini API key is stored in Supabase linked to user id/email and persists until explicitly deleted by the user",
-    "AI Chat must use @google/genai JS SDK (GoogleGenAI) directly from frontend — NOT via ICP canister backend call; canister sendMessage route must be removed or bypassed"
+    "AI Chat must use @google/genai JS SDK (GoogleGenAI) directly from frontend — NOT via ICP canister backend call; canister sendMessage route must be removed or bypassed",
+    "User data (timetable slots, tasks, day tracker entries) must be persisted in browser localStorage as a fallback/primary store so data survives sessions without requiring explicit user deletion",
+    "PWA support required: service worker for offline caching and web manifest for mobile install prompt"
   ],
   "known_issues": [
     "Deployment error encountered; fix requested without rebuilding from scratch",
     "IC0508 error: canister zh3qc-4iaaa-aaaai-q47va-cai is stopped; Chat.tsx is incorrectly routing Gemini calls through the ICP canister instead of calling Gemini REST API directly from frontend using @google/genai SDK"
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-apply-a-minimalistic-professional-visual-theme-across-the-entire-application-use-a-clean-neutral-base-white-light-gray-backgrounds-with-a-deep-teal-or-slate-green-primary-accent-sharp-typography-e-g-inter-or-similar-sans-serif-consistent-card-shadows-and-subtle-hover-focus-states-enforce-this-theme-globally-via-tailwind-config-tokens-and-apply-it-consistently-to-all-pages-and-components",
@@ -170,6 +172,102 @@
         "REQ-25"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-components-layout-tsx-update-the-footer-text-from-2026-acadmind-built-with-using-caffeine-ai-to-2026-acadmind-built-by-nabeel-babar",
+      "title": "In frontend/src/components/Layout.tsx, update the footer text from '© 2026 AcadMind. Built with ♥ using caffeine.ai' to '© 2026 AcadMind Built by Nabeel Babar'.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-day-tracker-page-frontend-src-pages-daytracker-tsx-to-allow-users-to-add-entries-by-specifying-a-number-of-hours-numeric-input-e-g-1-1-5-2-and-an-optional-description-of-what-they-did-or-learned-during-those-hours-replace-or-augment-any-existing-start-end-time-based-entry-form-with-this-hours-description-model-each-entry-should-display-the-logged-hours-and-the-description-if-provided-in-the-list-view",
+      "title": "Update the Day Tracker page (frontend/src/pages/DayTracker.tsx) to allow users to add entries by specifying a number of hours (numeric input, e.g. 1, 1.5, 2) and an optional description of what they did or learned during those hours. Replace or augment any existing start/end time-based entry form with this hours + description model. Each entry should display the logged hours and the description (if provided) in the list view.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-at-the-bottom-of-the-day-tracker-page-display-a-daily-summary-section-for-the-selected-date-that-shows-1-the-total-hours-logged-sum-of-all-entry-hours-for-that-day-2-the-total-minutes-equivalent-e-g-2-hours-30-minutes-and-3-a-readable-breakdown-list-of-all-entry-descriptions-for-that-day-under-a-heading-such-as-what-you-did-today-so-the-user-can-review-how-much-they-learned-and-worked",
+      "title": "At the bottom of the Day Tracker page, display a daily summary section for the selected date that shows: (1) the total hours logged (sum of all entry hours for that day), (2) the total minutes equivalent (e.g., '2 hours 30 minutes'), and (3) a readable breakdown list of all entry descriptions for that day under a heading such as 'What you did today' — so the user can review how much they learned and worked.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-localstorage-persistence-layer-for-day-tracker-entries-key-acadmind-day-entries-to-store-each-entry-with-the-fields-id-date-iso-date-string-hours-number-description-optional-string-and-completed-boolean-ensure-the-react-query-hooks-in-frontend-src-hooks-usequeries-ts-or-equivalent-localstorage-hooks-are-updated-to-read-and-write-this-new-schema-backward-compatibility-with-old-entries-is-not-required-the-schema-may-be-reset",
+      "title": "Update the localStorage persistence layer for Day Tracker entries (key: 'acadmind_day_entries') to store each entry with the fields: id, date (ISO date string), hours (number), description (optional string), and completed (boolean). Ensure the React Query hooks in frontend/src/hooks/useQueries.ts (or equivalent localStorage hooks) are updated to read and write this new schema. Backward-compatibility with old entries is not required — the schema may be reset.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-daytracker-tsx-add-an-inline-edit-button-to-each-day-tracker-entry-card-clicking-edit-opens-a-modal-or-inline-form-pre-populated-with-the-entry-s-current-hours-and-description-values-on-save-update-the-entry-in-the-acadmind-day-entries-localstorage-store-matching-by-entry-id-and-reflect-the-change-immediately-in-the-ui-show-a-success-toast-on-successful-update",
+      "title": "In frontend/src/pages/DayTracker.tsx, add an inline Edit button to each Day Tracker entry card. Clicking Edit opens a modal or inline form pre-populated with the entry's current hours and description values. On save, update the entry in the 'acadmind_day_entries' localStorage store (matching by entry id) and reflect the change immediately in the UI. Show a success toast on successful update.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-daytracker-tsx-add-a-delete-button-to-each-day-tracker-entry-card-clicking-delete-removes-the-entry-from-the-acadmind-day-entries-localstorage-store-matching-by-entry-id-and-removes-it-from-the-ui-immediately-show-a-success-toast-on-successful-deletion",
+      "title": "In frontend/src/pages/DayTracker.tsx, add a Delete button to each Day Tracker entry card. Clicking Delete removes the entry from the 'acadmind_day_entries' localStorage store (matching by entry id) and removes it from the UI immediately. Show a success toast on successful deletion.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-web-app-manifest-file-at-frontend-public-manifest-json-with-the-following-fields-name-acadmind-short-name-acadmind-description-intelligent-academic-management-platform-start-url-display-standalone-background-color-ffffff-theme-color-matching-the-app-s-teal-slate-green-primary-accent-and-an-icons-array-with-at-least-two-icon-entries-192x192-and-512x512-png-link-the-manifest-in-frontend-index-html-via-a-link-rel-manifest-tag",
+      "title": "Create a Web App Manifest file at frontend/public/manifest.json with the following fields: name ('AcadMind'), short_name ('AcadMind'), description ('Intelligent Academic Management Platform'), start_url ('/'), display ('standalone'), background_color ('#ffffff'), theme_color matching the app's teal/slate-green primary accent, and an icons array with at least two icon entries (192x192 and 512x512 PNG). Link the manifest in frontend/index.html via a <link rel=\"manifest\"> tag.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-generate-pwa-icon-assets-a-192x192-png-and-a-512x512-png-for-the-acadmind-app-icon-placed-in-frontend-public-assets-generated-reference-these-icon-paths-in-the-manifest-json-icons-array",
+      "title": "Generate PWA icon assets: a 192x192 PNG and a 512x512 PNG for the AcadMind app icon, placed in frontend/public/assets/generated/. Reference these icon paths in the manifest.json icons array.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-service-worker-file-at-frontend-public-sw-js-that-implements-a-cache-first-offline-strategy-on-install-pre-cache-all-static-assets-html-css-js-bundles-fonts-and-the-generated-icon-assets-on-fetch-serve-from-cache-when-available-falling-back-to-the-network-on-activation-delete-outdated-caches-register-the-service-worker-from-frontend-index-html-or-frontend-src-main-tsx-using-navigator-serviceworker-register-sw-js-only-in-production-builds",
+      "title": "Create a Service Worker file at frontend/public/sw.js that implements a cache-first offline strategy. On install, pre-cache all static assets (HTML, CSS, JS bundles, fonts, and the generated icon assets). On fetch, serve from cache when available, falling back to the network. On activation, delete outdated caches. Register the service worker from frontend/index.html or frontend/src/main.tsx using navigator.serviceWorker.register('/sw.js') only in production builds.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-mobile-install-prompt-to-the-application-listen-for-the-beforeinstallprompt-browser-event-capture-it-and-display-a-dismissible-banner-or-toast-at-the-bottom-of-the-screen-on-mobile-viewports-prompting-the-user-to-install-acadmind-for-offline-use-with-an-install-button-and-a-dismiss-button-triggering-install-calls-prompt-on-the-captured-event-the-banner-should-not-appear-again-after-the-user-dismisses-it-persist-dismissal-in-localstorage-under-key-acadmind-pwa-dismissed-also-add-the-required-meta-name-apple-mobile-web-app-capable-content-yes-and-meta-name-apple-mobile-web-app-status-bar-style-tags-in-frontend-index-html-for-ios-home-screen-support",
+      "title": "Add a mobile install prompt to the application. Listen for the beforeinstallprompt browser event, capture it, and display a dismissible banner or toast at the bottom of the screen (on mobile viewports) prompting the user to 'Install AcadMind for offline use' with an 'Install' button and a 'Dismiss' button. Triggering 'Install' calls prompt() on the captured event. The banner should not appear again after the user dismisses it (persist dismissal in localStorage under key 'acadmind_pwa_dismissed'). Also add the required <meta name=\"apple-mobile-web-app-capable\" content=\"yes\"> and <meta name=\"apple-mobile-web-app-status-bar-style\"> tags in frontend/index.html for iOS home screen support.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-light-dark-theme-toggle-button-in-the-top-right-area-of-the-app-header-visible-on-all-pages-that-allows-users-to-switch-between-light-white-and-dark-themes-the-toggle-should-display-an-appropriate-sun-moon-icon-persist-the-user-s-theme-preference-in-localstorage-under-the-key-acadmind-theme-so-it-is-restored-on-next-visit-wire-the-toggle-to-the-existing-themeprovider-in-app-tsx-and-the-css-custom-properties-already-defined-in-frontend-src-index-css-for-light-and-dark-modes",
+      "title": "Add a light/dark theme toggle button in the top-right area of the app header (visible on all pages) that allows users to switch between light (white) and dark themes. The toggle should display an appropriate sun/moon icon. Persist the user's theme preference in localStorage under the key 'acadmind_theme' so it is restored on next visit. Wire the toggle to the existing ThemeProvider in App.tsx and the CSS custom properties already defined in frontend/src/index.css for light and dark modes.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-timetableupload-tsx-replace-any-text-or-error-message-that-currently-displays-no-or-a-negative-error-response-when-the-user-clicks-the-extract-timetable-ocr-button-with-a-clearly-styled-coming-soon-message-the-message-should-inform-the-user-that-this-feature-is-not-yet-available-displayed-inline-where-the-result-would-normally-appear-do-not-show-any-error-or-no-text-in-this-context",
+      "title": "In frontend/src/pages/TimetableUpload.tsx, replace any text or error message that currently displays 'No' (or a negative/error response) when the user clicks the 'Extract Timetable' / OCR button with a clearly styled 'Coming Soon' message. The message should inform the user that this feature is not yet available, displayed inline where the result would normally appear. Do not show any error or 'No' text in this context.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -279,6 +377,64 @@
       "reqIds": [
         "REQ-26"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Change footer copyright text from '© 2026 AcadMind. Built with ♥ using caffeine.ai' to '© 2026 AcadMind Built by Nabeel Babar'",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-30",
+      "summary": "Persist all user data (timetable slots, assignments/quizzes, day tracker entries, user profile/API key) in browser localStorage so data is never lost unless the user explicitly deletes it themselves",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-31",
+      "summary": "Migrate all frontend data persistence from the ICP backend canister to browser localStorage. Timetable slots, assignments/quizzes, day tracker entries, and user profile data (name, email, Gemini API key) must all be read from and written to localStorage. Each data category must use a distinct, namespaced localStorage key (e.g., 'acadmind_slots', 'acadmind_tasks', 'acadmind_day_entries', 'acadmind_user'). Data must persist across page reloads and browser sessions, and must only be removed when the user explicitly deletes it via the existing delete/clear controls in the UI.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-32",
+      "summary": "Update the user authentication flow in UserContext (frontend/src/contexts/UserContext.tsx) to persist the authenticated user record (id, name, email, gemini_api_key) in localStorage under the key 'acadmind_user'. On app startup, read from localStorage first — if a user record exists, skip the login modal and restore the session automatically. Only show the login modal when no stored user record is found. This replaces any session-only (in-memory) storage of the user record.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-33",
+      "summary": "In the Day Tracker section, allow users to add entries with a number of hours and an optional description. At the end of the day, show total hours and minutes logged, summarizing what the user did and how much they learned that day.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-34",
+      "summary": "Add edit and delete functionality to Day Tracker entries: users can edit the logged hours and description of any existing entry, and delete any entry from the list.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-35",
+      "summary": "Add PWA (Progressive Web App) support: add a web manifest, service worker with offline caching, and install prompt so users can install the app on their mobile device and use it without an internet connection",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-36",
+      "summary": "Add a light/dark theme toggle button in the top-right area of the app so users can switch between white and dark themes",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-37",
+      "summary": "On the OCR page, replace any 'No' or error text shown when user clicks the OCR/extract button with a 'Coming Soon' message instead",
+      "reqIds": [],
       "status": "pending"
     }
   ],
