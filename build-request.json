@@ -1,0 +1,65 @@
+{
+  "kind": "build_request",
+  "title": "Fix Chat.tsx: Route Gemini calls directly via @google/genai SDK instead of ICP canister",
+  "projectName": "AcadMind",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-25",
+      "text": "In frontend/src/pages/Chat.tsx, remove any code that routes Gemini API calls through the ICP backend canister (sendMessage or any actor method). Instead, call the Gemini 2.5 Flash model directly from the frontend using the @google/genai SDK: import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }). Use the user's stored geminiApiKey from UserContext. Build the system prompt dynamically from the user's current timetable slots and tasks fetched via existing React Query hooks. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Canister zh3qc-4iaaa-aaaai-q47va-cai is stopped",
+          "Method name: sendMessage",
+          "use javascript for integration of gemini 2.5-flash model import { GoogleGenAI } from \"@google/genai\"; const ai = new GoogleGenAI({}); async function main() { const response = await ai.models.generateContent({ model: \"gemini-2.5-flash\", contents: \"user query\" }); console.log(response.text); }"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Chat.tsx no longer calls any ICP actor method (e.g., sendMessage) for AI responses",
+        "Gemini API calls are made directly from the frontend using @google/genai SDK with GoogleGenAI instantiated with the user's geminiApiKey",
+        "Model used is exactly 'gemini-2.5-flash'",
+        "The IC0508 canister-stopped error no longer appears when sending a chat message",
+        "System prompt is dynamically built from the user's timetable slots and tasks",
+        "If geminiApiKey is absent from UserContext, an inline message prompts the user to add their key in the sidebar",
+        "Chat UI remains intact: scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, and formatted responses all work correctly"
+      ]
+    },
+    {
+      "id": "REQ-26",
+      "text": "Ensure @google/genai is listed as a dependency in frontend/package.json. If it is missing, add it so it is installed during the build step and the import { GoogleGenAI } from '@google/genai' statement in Chat.tsx resolves without errors.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "import { GoogleGenAI } from \"@google/genai\""
+        ]
+      },
+      "acceptanceCriteria": [
+        "@google/genai appears in the dependencies section of frontend/package.json",
+        "The frontend build completes without 'Cannot find module @google/genai' errors"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not route any Gemini API calls through the ICP backend canister",
+    "Do not alter immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui",
+    "Do not modify the backend/main.mo actor for this fix",
+    "geminiChat.ts utility (frontend/src/utils/geminiChat.ts) should also be updated if it is the source of the canister call, ensuring it uses @google/genai SDK directly"
+  ],
+  "nonGoals": [
+    "Restarting or modifying the stopped ICP canister",
+    "Changing the OCR timetable extraction logic in geminiOcr.ts or TimetableUpload.tsx",
+    "Rebuilding the chat UI from scratch",
+    "Adding new chat features beyond fixing the API routing"
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

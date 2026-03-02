@@ -1,0 +1,47 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-03-02T15:07:25.819Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 2,
+    "implemented": 1,
+    "items": [
+      {
+        "id": "REQ-25",
+        "summary": "In frontend/src/pages/Chat.tsx, remove any code that routes Gemini API calls through the ICP backend canister (sendMessage or any actor method). Instead, call the Gemini 2.5 Flash model directly from the frontend using the @google/genai SDK: import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }). Use the user's stored geminiApiKey from UserContext. Build the system prompt dynamically from the user's current timetable slots and tasks fetched via existing React Query hooks. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/utils/geminiChat.ts",
+          "frontend/src/pages/Chat.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/Chat.tsx"
+        ]
+      },
+      {
+        "id": "REQ-26",
+        "summary": "Ensure @google/genai is listed as a dependency in frontend/package.json. If it is missing, add it so it is installed during the build step and the import { GoogleGenAI } from '@google/genai' statement in Chat.tsx resolves without errors.",
+        "status": "missing",
+        "plannedFiles": [
+          "frontend/package.json"
+        ],
+        "matchedFiles": []
+      }
+    ]
+  },
+  "changedFiles": [
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/pages/Chat.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

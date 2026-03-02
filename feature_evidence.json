@@ -1,0 +1,23 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-in-frontend-src-pages-chat-tsx-remove-any-code-that-routes-gemini-api-calls-through-the-icp-backend-canister-sendmessage-or-any-actor-method-instead-call-the-gemini-2-5-flash-model-directly-from-the-frontend-using-the-google-genai-sdk-import-googlegenai-from-google-genai-instantiate-with-new-googlegenai-apikey-geminiapikey-and-call-ai-models-generatecontent-model-gemini-2-5-flash-contents-userquery-use-the-user-s-stored-geminiapikey-from-usercontext-build-the-system-prompt-dynamically-from-the-user-s-current-timetable-slots-and-tasks-fetched-via-existing-react-query-hooks-if-no-api-key-is-stored-display-an-inline-prompt-directing-the-user-to-add-their-key-in-the-sidebar-preserve-the-existing-chat-ui-scrollable-history-send-button-enter-to-send-typing-indicator-clear-chat-button-formatted-responses",
+      "featureTitle": "In frontend/src/pages/Chat.tsx, remove any code that routes Gemini API calls through the ICP backend canister (sendMessage or any actor method). Instead, call the Gemini 2.5 Flash model directly from the frontend using the @google/genai SDK: import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }). Use the user's stored geminiApiKey from UserContext. Build the system prompt dynamically from the user's current timetable slots and tasks fetched via existing React Query hooks. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "files": [
+        "frontend/src/pages/Chat.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-25"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

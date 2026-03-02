@@ -1,0 +1,289 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 15,
+  "summary": "A student-focused intelligent academic management web platform with five core modules: AI Chat System (Gemini 2.5 Flash), OCR-Based Timetable Extraction (Gemini-powered), Manual Timetable Slot Management, Quiz & Assignment Tracking, and Day Tracker. Includes user authentication via name/email with per-user Gemini API key storage in Supabase (academic_users table). Dashboard shows today's schedule, upcoming tasks, and quick-access navigation. Desktop-first, responsive, minimalistic professional design. Backend uses Supabase for all data persistence.",
+  "architectural_notes": [
+    "Sidebar or top navigation for clear module access (Chat, Timetable, Assignments, Dashboard)",
+    "Desktop-first responsive layout with mobile compatibility",
+    "Integrates with two external APIs: Chat API (AI assistant) and OCR API (timetable extraction)",
+    "Fast interaction feedback required: loaders, success/error messages throughout all modules",
+    "Supabase is used as the primary database; academic_users table stores user id, name (unique email) for authentication and per-user Gemini API key storage",
+    "Gemini 2.5 Flash powers two separate features: AI Chat (with timetable/assignment context) and OCR timetable extraction — each uses a dedicated backend endpoint",
+    "Per-user Gemini API key is stored in Supabase linked to user id/email and persists until explicitly deleted by the user",
+    "AI Chat must use @google/genai JS SDK (GoogleGenAI) directly from frontend — NOT via ICP canister backend call; canister sendMessage route must be removed or bypassed"
+  ],
+  "known_issues": [
+    "Deployment error encountered; fix requested without rebuilding from scratch",
+    "IC0508 error: canister zh3qc-4iaaa-aaaai-q47va-cai is stopped; Chat.tsx is incorrectly routing Gemini calls through the ICP canister instead of calling Gemini REST API directly from frontend using @google/genai SDK"
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-apply-a-minimalistic-professional-visual-theme-across-the-entire-application-use-a-clean-neutral-base-white-light-gray-backgrounds-with-a-deep-teal-or-slate-green-primary-accent-sharp-typography-e-g-inter-or-similar-sans-serif-consistent-card-shadows-and-subtle-hover-focus-states-enforce-this-theme-globally-via-tailwind-config-tokens-and-apply-it-consistently-to-all-pages-and-components",
+      "title": "Apply a minimalistic, professional visual theme across the entire application. Use a clean neutral base (white/light gray backgrounds) with a deep teal or slate-green primary accent, sharp typography (e.g., Inter or similar sans-serif), consistent card shadows, and subtle hover/focus states. Enforce this theme globally via Tailwind config tokens and apply it consistently to all pages and components.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-persistent-sidebar-navigation-collapsible-on-smaller-viewports-with-links-to-dashboard-chat-timetable-ocr-upload-manual-slots-and-assignments-include-the-app-name-logo-in-the-sidebar-header-on-mobile-the-sidebar-should-collapse-into-a-hamburger-menu",
+      "title": "Implement a persistent sidebar navigation (collapsible on smaller viewports) with links to: Dashboard, Chat, Timetable (OCR Upload + Manual Slots), and Assignments. Include the app name/logo in the sidebar header. On mobile, the sidebar should collapse into a hamburger menu.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-dashboard-homepage-that-displays-1-a-today-s-schedule-section-listing-timetable-slots-for-the-current-day-of-the-week-fetched-from-the-backend-2-an-upcoming-tasks-summary-showing-the-next-3-quizzes-assignments-sorted-by-due-date-with-their-status-and-3-four-quick-access-action-buttons-open-chat-upload-timetable-create-slot-and-view-assignments-that-navigate-to-their-respective-sections",
+      "title": "Create a Dashboard homepage that displays: (1) a 'Today's Schedule' section listing timetable slots for the current day of the week fetched from the backend, (2) an 'Upcoming Tasks' summary showing the next 3 quizzes/assignments sorted by due date with their status, and (3) four quick-access action buttons — Open Chat, Upload Timetable, Create Slot, and View Assignments — that navigate to their respective sections.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-manual-timetable-slot-management-ui-include-1-a-weekly-grid-view-columns-days-mon-sun-rows-time-blocks-that-renders-all-stored-slots-as-cards-within-the-correct-cell-2-an-add-slot-modal-form-with-fields-day-time-subject-location-optional-remarks-optional-3-inline-edit-and-delete-controls-on-each-slot-card-4-success-error-toast-feedback-on-save-update-or-delete-actions",
+      "title": "Build the Manual Timetable Slot Management UI. Include: (1) a weekly grid view (columns = days Mon–Sun, rows = time blocks) that renders all stored slots as cards within the correct cell, (2) an 'Add Slot' modal/form with fields Day, Time, Subject, Location (optional), Remarks (optional), (3) inline Edit and Delete controls on each slot card, (4) success/error toast feedback on save, update, or delete actions.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-quiz-assignment-tracking-ui-include-1-a-card-based-or-table-based-list-view-of-all-tasks-showing-title-subject-due-date-status-badge-and-remarks-2-filter-controls-for-upcoming-status-pending-due-date-in-future-completed-and-by-subject-3-a-mark-as-completed-toggle-on-each-task-card-4-add-edit-delete-task-functionality-via-a-form-modal-5-empty-state-messaging-when-no-tasks-match-the-active-filter",
+      "title": "Build the Quiz & Assignment Tracking UI. Include: (1) a card-based or table-based list view of all tasks showing Title, Subject, Due Date, Status badge, and Remarks, (2) filter controls for Upcoming (status=pending, due date in future), Completed, and by Subject, (3) a 'Mark as Completed' toggle on each task card, (4) Add/Edit/Delete task functionality via a form modal, (5) empty state messaging when no tasks match the active filter.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-ocr-based-timetable-extraction-ui-page-include-1-a-drag-and-drop-upload-area-with-a-browse-fallback-button-that-accepts-image-files-png-jpg-webp-2-a-preview-of-the-uploaded-image-before-processing-3-a-extract-timetable-button-that-sends-the-image-to-a-mock-ocr-handler-and-shows-a-loading-spinner-during-processing-4-display-the-extracted-timetable-data-in-a-structured-table-grid-view-5-allow-the-user-to-manually-edit-any-extracted-cell-value-inline-6-a-save-timetable-button-that-persists-the-extracted-edited-slots-to-the-backend-using-the-addslot-function",
+      "title": "Build the OCR-Based Timetable Extraction UI page. Include: (1) a drag-and-drop upload area with a 'Browse' fallback button that accepts image files (PNG, JPG, WEBP), (2) a preview of the uploaded image before processing, (3) a 'Extract Timetable' button that sends the image to a mock OCR handler and shows a loading spinner during processing, (4) display the extracted timetable data in a structured table/grid view, (5) allow the user to manually edit any extracted cell value inline, (6) a 'Save Timetable' button that persists the extracted+edited slots to the backend using the addSlot function.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-ai-chat-interface-page-include-1-a-scrollable-message-history-panel-that-displays-user-and-assistant-messages-with-distinct-visual-styling-2-a-text-input-box-with-a-send-button-also-submits-on-enter-3-a-loading-typing-indicator-while-waiting-for-a-response-4-formatted-rendering-for-structured-responses-e-g-timetable-lists-quiz-summaries-displayed-as-readable-blocks-5-a-clear-chat-button-that-resets-the-conversation-6-a-mock-ai-response-handler-on-the-backend-that-accepts-a-user-message-string-and-returns-a-placeholder-intelligent-looking-response-referencing-timetable-task-context-from-stored-data",
+      "title": "Build the AI Chat interface page. Include: (1) a scrollable message history panel that displays user and assistant messages with distinct visual styling, (2) a text input box with a Send button (also submits on Enter), (3) a loading/typing indicator while waiting for a response, (4) formatted rendering for structured responses (e.g., timetable lists, quiz summaries displayed as readable blocks), (5) a 'Clear Chat' button that resets the conversation, (6) a mock AI response handler on the backend that accepts a user message string and returns a placeholder intelligent-looking response referencing timetable/task context from stored data.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-entire-application-is-responsive-on-desktop-1024px-the-sidebar-is-expanded-and-visible-on-tablet-768-1023px-the-sidebar-collapses-by-default-on-mobile-768px-the-sidebar-is-hidden-behind-a-hamburger-toggle-all-grids-cards-and-tables-must-adapt-gracefully-to-narrower-viewports-without-horizontal-overflow",
+      "title": "Ensure the entire application is responsive. On desktop (≥1024px), the sidebar is expanded and visible. On tablet (768–1023px), the sidebar collapses by default. On mobile (<768px), the sidebar is hidden behind a hamburger toggle. All grids, cards, and tables must adapt gracefully to narrower viewports without horizontal overflow.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-rebuild-the-entire-application-from-a-clean-draft-state-ensuring-all-previously-defined-features-are-implemented-correctly-end-to-end-backend-crud-for-timetable-slots-and-tasks-ai-chat-mock-handler-dashboard-sidebar-navigation-ocr-upload-page-manual-slot-management-assignment-tracker-and-global-visual-theme",
+      "title": "Rebuild the entire application from a clean draft state, ensuring all previously defined features are implemented correctly end-to-end: backend CRUD for timetable slots and tasks, AI chat mock handler, dashboard, sidebar navigation, OCR upload page, manual slot management, assignment tracker, and global visual theme.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-sidebar-component-frontend-src-components-sidebar-tsx-update-all-navigation-button-link-text-colors-and-icon-colors-to-white-this-includes-nav-link-labels-nav-icons-dashboard-chat-timetable-assignments-and-any-sub-menu-items-and-the-mobile-close-button-icon-do-not-alter-any-other-styling-layout-structure-or-files-outside-of-sidebar-tsx",
+      "title": "In the Sidebar component (frontend/src/components/Sidebar.tsx), update all navigation button/link text colors and icon colors to white. This includes: nav link labels, nav icons (Dashboard, Chat, Timetable, Assignments, and any sub-menu items), and the mobile close button icon. Do not alter any other styling, layout, structure, or files outside of Sidebar.tsx.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-set-up-supabase-client-integration-in-the-frontend-using-the-provided-credentials-supabase-url-https-lubrvhagmxvzkvpakcfv-supabase-co-supabase-key-sb-secret-4agfr0f6n3jjl0r9t1tqeq-mlvvbb6t-create-a-supabase-table-academic-users-with-columns-id-uuid-primary-key-auto-generated-name-text-not-null-email-text-unique-not-null-gemini-api-key-text-nullable-created-at-timestamptz-default-now-install-and-configure-the-supabase-js-client-supabase-js-in-the-frontend-project-expose-a-singleton-supabaseclient-instance-in-frontend-src-lib-supabaseclient-ts",
+      "title": "Set up Supabase client integration in the frontend using the provided credentials (SUPABASE_URL='https://lubrvhagmxvzkvpakcfv.supabase.co', SUPABASE_KEY='sb_secret_4agFR0f6n3jJl0R9T1tQeQ_mlvVbb6T'). Create a Supabase table 'academic_users' with columns: id (uuid, primary key, auto-generated), name (text, not null), email (text, unique, not null), gemini_api_key (text, nullable), created_at (timestamptz, default now()). Install and configure the Supabase JS client (supabase-js) in the frontend project. Expose a singleton supabaseClient instance in frontend/src/lib/supabaseClient.ts.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-user-authentication-flow-at-app-startup-before-accessing-any-page-prompt-the-user-to-enter-their-name-and-email-in-a-modal-overlay-on-submit-upsert-a-row-in-the-academic-users-supabase-table-match-on-email-insert-if-not-found-return-existing-if-found-store-the-returned-user-record-id-name-email-gemini-api-key-in-react-context-frontend-src-context-usercontext-tsx-accessible-throughout-the-app-the-user-remains-authenticated-for-the-session-their-record-persists-in-supabase-across-sessions-when-they-provide-the-same-email",
+      "title": "Add a user authentication flow at app startup: before accessing any page, prompt the user to enter their Name and Email in a modal/overlay. On submit, upsert a row in the 'academic_users' Supabase table (match on email; insert if not found, return existing if found). Store the returned user record (id, name, email, gemini_api_key) in React context (frontend/src/context/UserContext.tsx) accessible throughout the app. The user remains authenticated for the session; their record persists in Supabase across sessions when they provide the same email.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-gemini-api-key-input-section-at-the-bottom-of-the-sidebar-frontend-src-components-sidebar-tsx-show-a-small-labeled-input-field-and-a-save-key-button-when-saved-update-the-gemini-api-key-column-in-the-academic-users-supabase-table-for-the-current-user-s-id-and-update-usercontext-show-a-delete-key-button-if-a-key-is-already-stored-clicking-it-sets-gemini-api-key-to-null-in-supabase-and-clears-it-from-context-display-a-masked-truncated-view-of-the-stored-key-e-g-aiza-xxxx-when-one-is-saved-show-success-error-toast-on-save-or-delete",
+      "title": "Add a Gemini API Key input section at the bottom of the Sidebar (frontend/src/components/Sidebar.tsx). Show a small labeled input field and a 'Save Key' button. When saved, update the gemini_api_key column in the academic_users Supabase table for the current user's id, and update UserContext. Show a 'Delete Key' button if a key is already stored; clicking it sets gemini_api_key to null in Supabase and clears it from context. Display a masked/truncated view of the stored key (e.g., 'AIza...xxxx') when one is saved. Show success/error toast on save or delete.",
+      "reqIds": [
+        "REQ-15",
+        "REQ-23"
+      ],
+      "version": 2
+    },
+    {
+      "id": "feature-replace-the-existing-mock-ai-chat-handler-in-frontend-src-pages-chat-tsx-with-a-real-gemini-2-5-flash-api-integration-use-the-user-s-stored-geminiapikey-from-usercontext-to-call-the-gemini-rest-api-model-gemini-2-5-flash-directly-from-the-frontend-build-the-system-prompt-dynamically-using-the-user-s-current-timetable-slots-assignments-and-quizzes-fetched-via-existing-react-query-hooks-so-the-ai-has-full-context-if-no-api-key-is-stored-display-an-inline-prompt-directing-the-user-to-add-their-key-in-the-sidebar-the-chatbot-must-answer-queries-relevant-to-the-user-s-academic-data-preserve-the-existing-chat-ui-scrollable-history-send-button-enter-to-send-typing-indicator-clear-chat-button-formatted-responses",
+      "title": "Replace the existing mock AI chat handler in frontend/src/pages/Chat.tsx with a real Gemini 2.5 Flash API integration. Use the user's stored geminiApiKey from UserContext to call the Gemini REST API (model: gemini-2.5-flash) directly from the frontend. Build the system prompt dynamically using the user's current timetable slots, assignments, and quizzes fetched via existing React Query hooks, so the AI has full context. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. The chatbot must answer queries relevant to the user's academic data. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-mock-ocr-handler-in-frontend-src-pages-timetableupload-tsx-with-a-dedicated-gemini-2-5-flash-vision-api-call-kept-completely-separate-from-the-chat-api-call-logic-when-the-user-clicks-extract-timetable-convert-the-uploaded-image-to-base64-and-send-it-to-the-gemini-api-model-gemini-2-5-flash-with-a-prompt-instructing-the-model-to-extract-timetable-slots-and-return-structured-json-array-of-objects-with-fields-day-time-subject-location-remarks-use-the-user-s-stored-geminiapikey-from-usercontext-this-ocr-handler-must-live-in-its-own-utility-file-frontend-src-utils-geminiocr-ts-with-no-shared-code-path-to-the-chat-logic-show-a-loading-spinner-during-extraction-if-no-api-key-is-available-show-an-inline-error-message-the-extracted-slots-remain-editable-inline-before-saving",
+      "title": "Replace the mock OCR handler in frontend/src/pages/TimetableUpload.tsx with a dedicated Gemini 2.5 Flash vision API call (kept completely separate from the chat API call logic). When the user clicks 'Extract Timetable', convert the uploaded image to base64 and send it to the Gemini API (model: gemini-2.5-flash) with a prompt instructing the model to extract timetable slots and return structured JSON (array of objects with fields: day, time, subject, location, remarks). Use the user's stored geminiApiKey from UserContext. This OCR handler must live in its own utility file (frontend/src/utils/geminiOcr.ts) with no shared code path to the chat logic. Show a loading spinner during extraction. If no API key is available, show an inline error message. The extracted slots remain editable inline before saving.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-day-tracker-page-frontend-src-pages-daytracker-tsx-and-register-it-as-a-route-in-app-tsx-add-a-day-tracker-navigation-link-in-the-sidebar-frontend-src-components-sidebar-tsx-with-an-appropriate-icon-styled-with-white-text-icon-consistent-with-the-existing-sidebar-style-the-page-must-allow-users-to-1-select-or-default-to-the-current-date-2-log-hourly-time-blocks-e-g-09-00-10-00-for-the-selected-day-by-clicking-an-add-hour-entry-button-3-optionally-write-a-note-for-each-hour-describing-what-was-done-during-that-hour-4-mark-an-hour-entry-as-completed-5-automatically-compute-and-display-the-total-completed-hours-and-total-completed-minutes-for-the-selected-day-using-the-date-fns-or-dayjs-library-for-time-calculations-6-show-a-daily-bar-chart-or-comparison-panel-comparing-total-logged-hours-across-the-last-7-days-persist-all-day-tracker-entries-in-the-backend",
+      "title": "Add a 'Day Tracker' page (frontend/src/pages/DayTracker.tsx) and register it as a route in App.tsx. Add a 'Day Tracker' navigation link in the sidebar (frontend/src/components/Sidebar.tsx) with an appropriate icon, styled with white text/icon consistent with the existing sidebar style. The page must allow users to: (1) select or default to the current date, (2) log hourly time blocks (e.g., 09:00–10:00) for the selected day by clicking an 'Add Hour Entry' button, (3) optionally write a note for each hour describing what was done during that hour, (4) mark an hour entry as 'completed', (5) automatically compute and display the total completed hours and total completed minutes for the selected day using the date-fns or dayjs library for time calculations, (6) show a daily bar chart or comparison panel comparing total logged hours across the last 7 days. Persist all day tracker entries in the backend.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-and-fix-all-typescript-compilation-errors-and-runtime-errors-in-the-frontend-that-may-be-contributing-to-the-deployment-failure-this-includes-missing-or-incorrect-type-imports-broken-references-to-usercontext-or-supabaseclient-any-invalid-imports-in-daytracker-tsx-app-tsx-route-registration-or-sidebar-tsx-do-not-alter-immutable-paths-resolve-only-what-is-broken",
+      "title": "Audit and fix all TypeScript compilation errors and runtime errors in the frontend that may be contributing to the deployment failure. This includes: missing or incorrect type imports, broken references to UserContext or supabaseClient, any invalid imports in DayTracker.tsx, App.tsx route registration, or Sidebar.tsx. Do not alter immutable paths. Resolve only what is broken.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-existing-mock-ai-chat-handler-in-frontend-src-pages-chat-tsx-with-a-real-gemini-2-5-flash-api-integration-use-the-user-s-stored-geminiapikey-from-usercontext-to-call-the-gemini-rest-api-model-gemini-2-5-flash-directly-from-the-frontend-build-the-system-prompt-dynamically-using-the-user-s-current-timetable-slots-assignments-and-quizzes-fetched-via-existing-react-query-hooks-so-the-ai-has-full-context-if-no-api-key-is-stored-display-an-inline-prompt-directing-the-user-to-add-their-key-in-the-sidebar-preserve-the-existing-chat-ui-scrollable-history-send-button-enter-to-send-typing-indicator-clear-chat-button-formatted-responses",
+      "title": "Replace the existing mock AI chat handler in frontend/src/pages/Chat.tsx with a real Gemini 2.5 Flash API integration. Use the user's stored geminiApiKey from UserContext to call the Gemini REST API (model: gemini-2.5-flash) directly from the frontend. Build the system prompt dynamically using the user's current timetable slots, assignments, and quizzes fetched via existing React Query hooks, so the AI has full context. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-chat-tsx-remove-any-code-that-routes-gemini-api-calls-through-the-icp-backend-canister-sendmessage-or-any-actor-method-instead-call-the-gemini-2-5-flash-model-directly-from-the-frontend-using-the-google-genai-sdk-import-googlegenai-from-google-genai-instantiate-with-new-googlegenai-apikey-geminiapikey-and-call-ai-models-generatecontent-model-gemini-2-5-flash-contents-userquery-use-the-user-s-stored-geminiapikey-from-usercontext-build-the-system-prompt-dynamically-from-the-user-s-current-timetable-slots-and-tasks-fetched-via-existing-react-query-hooks-if-no-api-key-is-stored-display-an-inline-prompt-directing-the-user-to-add-their-key-in-the-sidebar-preserve-the-existing-chat-ui-scrollable-history-send-button-enter-to-send-typing-indicator-clear-chat-button-formatted-responses",
+      "title": "In frontend/src/pages/Chat.tsx, remove any code that routes Gemini API calls through the ICP backend canister (sendMessage or any actor method). Instead, call the Gemini 2.5 Flash model directly from the frontend using the @google/genai SDK: import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }). Use the user's stored geminiApiKey from UserContext. Build the system prompt dynamically from the user's current timetable slots and tasks fetched via existing React Query hooks. If no API key is stored, display an inline prompt directing the user to add their key in the sidebar. Preserve the existing chat UI (scrollable history, Send button, Enter-to-send, typing indicator, Clear Chat button, formatted responses).",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "AI Chat interface with message history, loading states, formatted responses for timetable/quiz/assignments, and chat reset option",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "OCR-based timetable extraction with drag-and-drop image upload, preview, loading indicator, structured table display, manual edit, and save",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Manual timetable slot creation with Add/Edit/Delete form (Day, Time, Subject, Location, Remarks) and weekly grid view",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Quiz & Assignment tracker with list/card view, fields (Title, Subject, Due Date, Status, Remarks), filters (Upcoming/Completed/Subject), and mark-as-complete toggle",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Dashboard homepage with today's schedule preview, upcoming quiz/assignment summary, and quick-access buttons (Chat, Upload Timetable, Create Slot, View Assignments)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Implement the backend data model and CRUD operations for timetable slots. Each slot must store: day (Monday–Sunday), time (string, e.g. '09:00–10:00'), subject, location (optional), and remarks (optional). Expose query and update functions: getSlots, addSlot, updateSlot, deleteSlot.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Implement the backend data model and CRUD operations for quizzes and assignments. Each item must store: title, subject, due date (ISO date string), type ('quiz' | 'assignment'), status ('pending' | 'completed'), and remarks (optional). Expose: getTasks, addTask, updateTask, deleteTask, markComplete.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Change sidebar button text color and icon color to white without altering the rest of the codebase",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Add 'Day Tracker' sidebar menu: user logs working hours daily, optionally notes what they did each hour, counts total hours/minutes per day, shows daily comparison chart, uses a time library for tracking",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Integrate Gemini 2.5 Flash model for AI Chat: chatbot uses timetable slots, assignments, quizzes data as context and responds to relevant queries. Add Gemini API key input box in sidebar tied to user id/email, persisted in Supabase until user deletes it",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Use Gemini model for OCR timetable extraction via a separate dedicated endpoint (isolated from chat endpoint) so OCR and chat purposes remain independent",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Set up Supabase integration with academic_users table storing user id, name, and unique email. Connect backend to Supabase using provided credentials (SUPABASE_URL, SUPABASE_KEY)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Extend backend/main.mo to add CRUD operations for Day Tracker entries. Each entry stores: id (Nat), userId (Text), date (Text, ISO date string), startTime (Text, e.g. '09:00'), endTime (Text, e.g. '10:00'), note (optional Text), completed (Bool). Expose the following functions: addDayEntry(entry: DayEntryInput) : async DayEntry, getDayEntries(userId: Text, date: Text) : async [DayEntry], getDayEntriesByRange(userId: Text, startDate: Text, endDate: Text) : async [DayEntry], updateDayEntry(id: Nat, updates: DayEntryInput) : async ?DayEntry, deleteDayEntry(id: Nat) : async Bool. Store entries in a stable HashMap keyed by Nat id.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Audit and fix all compilation errors in backend/main.mo that are causing the deployment to fail. Ensure the Motoko actor compiles cleanly: resolve any type mismatches, missing imports, invalid stable variable declarations, or incompatible function signatures introduced by the Day Tracker CRUD additions (addDayEntry, getDayEntries, getDayEntriesByRange, updateDayEntry, deleteDayEntry) without removing or restructuring existing features.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Verify that all npm/package dependencies required by the frontend (including @supabase/supabase-js, date-fns or dayjs, recharts or equivalent chart library used in DayTracker, and any other packages referenced in source files) are correctly listed in package.json so they are installed during the build step. Add any missing dependencies.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-28",
+      "summary": "Ensure @google/genai is listed as a dependency in frontend/package.json. If it is missing, add it so it is installed during the build step and the import { GoogleGenAI } from '@google/genai' statement in Chat.tsx resolves without errors.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Academic Management Platform",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

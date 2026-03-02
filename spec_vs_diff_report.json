@@ -1,0 +1,30 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-03-02T15:07:25.814Z",
+  "summary": "The diff shows Chat.tsx has been updated to use callGeminiApi from geminiChat.ts (no ICP canister calls), uses geminiApiKey from UserContext, fetches slots/tasks via React Query hooks, shows an alert when no API key is present, and preserves existing UI. The geminiChat.ts utility is described as calling Gemini 2.5 Flash REST API directly. frontend/package.json is not shown in the diff, so REQ-26 cannot be confirmed.",
+  "missing_requirements": [
+    {
+      "id": "REQ-26",
+      "requirement": "Ensure @google/genai is listed as a dependency in frontend/package.json.",
+      "reason": "frontend/package.json does not appear in the diff at all. There is no evidence that @google/genai was added to package.json. The geminiChat.ts summary mentions 'Gemini 2.5 Flash REST API' which may suggest a fetch-based approach rather than the @google/genai SDK, but regardless, package.json changes are not shown.",
+      "evidence": []
+    },
+    {
+      "id": "REQ-25",
+      "requirement": "Call Gemini using import { GoogleGenAI } from '@google/genai'; instantiate with new GoogleGenAI({ apiKey: geminiApiKey }); and call ai.models.generateContent({ model: 'gemini-2.5-flash', contents: userQuery }).",
+      "reason": "Chat.tsx delegates to callGeminiApi from geminiChat.ts. The geminiChat.ts summary describes it as calling the 'Gemini 2.5 Flash REST API' rather than using the @google/genai SDK with the GoogleGenAI class as specified. This suggests a direct REST/fetch call may be used instead of the required SDK approach.",
+      "evidence": [
+        "frontend/src/utils/geminiChat.ts",
+        "frontend/src/pages/Chat.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [],
+  "confidence": 0.6,
+  "changed_files": [
+    "frontend-file-summaries.txt",
+    "frontend/src/pages/Chat.tsx",
+    "project_state.json"
+  ]
+}
