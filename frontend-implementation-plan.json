@@ -1,57 +1,26 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add light/dark theme toggle and OCR 'Coming Soon' message",
+  "title": "Day Tracker: Add summary stats panel (all-time, week, today hours & minutes)",
   "requirements": [
     {
-      "id": "REQ-39",
-      "summary": "Add a light/dark theme toggle button in the app header that persists user preference and works with existing ThemeProvider",
+      "id": "REQ-55",
+      "summary": "Add a prominent statistics summary panel at the top of the DayTracker page displaying four metrics: (1) All Days Hours — total sum of all logged hours across every date, (2) This Week Hours — sum of logged hours for the current calendar week (Monday to Sunday), (3) Today Hours — sum of logged hours for today, and (4) Today Minutes — today's total hours converted to minutes. The panel must react immediately to entry changes and use date-fns for date calculations.",
       "acceptanceCriteria": [
-        "A theme toggle button (sun/moon icon) is visible in the top-right corner of the app on all pages",
-        "Clicking the button switches the app between light and dark themes",
-        "The active theme is persisted in localStorage under 'acadmind_theme'",
-        "On page reload, the previously selected theme is restored automatically",
-        "Dark mode applies the dark CSS custom properties defined in frontend/src/index.css consistently across all pages and components",
-        "The toggle button itself is styled to remain visible and accessible in both light and dark themes"
+        "A stats panel is visible on the Day Tracker page with four cards: 'All Days Hours', 'This Week Hours', 'Today Hours', and 'Today Minutes'.",
+        "'All Days Hours' shows the correct sum of all entry hours across all dates in the user's namespaced localStorage store.",
+        "'This Week Hours' shows the correct sum of hours for entries with a date falling in the current Mon–Sun week.",
+        "'Today Hours' shows the correct sum of hours for entries dated today.",
+        "'Today Minutes' shows today's total hours converted to total minutes (e.g., 1.5 hours = 90 minutes).",
+        "All four values update immediately (without page reload) when an entry is added, edited, completed, or deleted.",
+        "The stats panel is styled consistently with the existing teal/slate-green theme and is fully responsive.",
+        "If there are no entries, all four values display as 0."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/ThemeToggle.tsx",
-          "operation": "create",
-          "description": "Create a new ThemeToggle component that renders a button with sun/moon icons (using lucide-react icons). The component reads the current theme from a theme context or hook, toggles between 'light' and 'dark' on click, persists the selection to localStorage under key 'acadmind_theme', and updates the document root element's class or data attribute to trigger CSS custom property changes. Style the button to remain visible in both themes using appropriate foreground/background tokens from frontend/src/index.css."
-        },
-        {
-          "path": "frontend/src/contexts/ThemeContext.tsx",
-          "operation": "create",
-          "description": "Create a ThemeContext and ThemeProvider that manages theme state ('light' or 'dark'), reads the initial theme from localStorage key 'acadmind_theme' (defaulting to 'light' if not set), applies the theme to the document root element (via className or dataset), and exposes a toggleTheme function and current theme value via a useTheme hook. Ensure the provider initializes theme on mount and synchronizes with localStorage on every change."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/DayTracker.tsx",
           "operation": "modify",
-          "description": "Wrap the existing app tree with the new ThemeProvider from frontend/src/contexts/ThemeContext.tsx, placing it at the outermost level (inside QueryClientProvider and InternetIdentityProvider but outside the Router). Ensure the ThemeProvider is active before any UI renders so the theme is applied immediately on load."
-        },
-        {
-          "path": "frontend/src/components/Layout.tsx",
-          "operation": "modify",
-          "description": "Import and render the ThemeToggle component in the top-right area of the header section, positioned next to or above the hamburger menu button. Ensure the toggle button is visible on all pages and styled to remain accessible in both light and dark themes. Adjust layout/spacing as needed to accommodate the new button without disrupting existing navigation elements."
-        }
-      ]
-    },
-    {
-      "id": "REQ-40",
-      "summary": "Replace negative/error OCR result text with a 'Coming Soon' message on the TimetableUpload page",
-      "acceptanceCriteria": [
-        "When the user clicks the 'Extract Timetable' button on the OCR Upload page, no 'No' or negative error text is shown",
-        "Instead, a 'Coming Soon' message is displayed inline in the result area",
-        "The 'Coming Soon' message is clearly readable and styled consistently with the app theme",
-        "The loading spinner (if shown) still appears briefly before the 'Coming Soon' message is displayed",
-        "No other functionality on the TimetableUpload page is altered"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/TimetableUpload.tsx",
-          "operation": "modify",
-          "description": "Locate the code that handles the OCR extraction result (likely after calling mockOcr or displaying an error) and replace any negative/error message text (e.g., 'No', 'Failed', or error strings) with a clearly styled 'Coming Soon' message. Display this message inline in the result area where the extracted slots or error would normally appear. Preserve the loading spinner behavior and ensure the 'Coming Soon' text is styled using theme-aware Tailwind classes (e.g., text-foreground, bg-muted) so it remains visible in both light and dark modes. Do not alter file upload, slot editing, or save functionality."
+          "description": "Add a statistics summary panel component above the existing entry list that displays four metric cards: 'All Days Hours', 'This Week Hours', 'Today Hours', and 'Today Minutes'. Compute 'All Days Hours' by summing all entry hours from the entries array. Compute 'This Week Hours' by filtering entries where the date falls within the current Mon–Sun week using date-fns (startOfWeek/endOfWeek with weekStartsOn: 1) and summing their hours. Compute 'Today Hours' by filtering entries matching today's ISO date and summing their hours. Compute 'Today Minutes' by multiplying 'Today Hours' by 60. Render each metric in a Card component (from shadcn/ui) with a clear label and large numeric value. Style the panel with a responsive grid layout (1 column on mobile, 2–4 columns on larger screens) and use the existing teal/slate-green theme colors. Ensure all calculations update reactively when entries change (the entries array is already reactive via React Query). Position the stats panel immediately above the week navigation controls or entry list section."
         }
       ]
     }

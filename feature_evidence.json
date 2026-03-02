@@ -2,11 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-light-dark-theme-toggle-button-in-the-top-right-area-of-the-app-header-visible-on-all-pages-that-allows-users-to-switch-between-light-white-and-dark-themes-the-toggle-should-display-an-appropriate-sun-moon-icon-persist-the-user-s-theme-preference-in-localstorage-under-the-key-acadmind-theme-so-it-is-restored-on-next-visit-wire-the-toggle-to-the-existing-themeprovider-in-app-tsx-and-the-css-custom-properties-already-defined-in-frontend-src-index-css-for-light-and-dark-modes",
-      "featureTitle": "Add a light/dark theme toggle button in the top-right area of the app header (visible on all pages) that allows users to switch between light (white) and dark themes. The toggle should display an appropriate sun/moon icon. Persist the user's theme preference in localStorage under the key 'acadmind_theme' so it is restored on next visit. Wire the toggle to the existing ThemeProvider in App.tsx and the CSS custom properties already defined in frontend/src/index.css for light and dark modes.",
+      "featureId": "feature-in-frontend-src-pages-daytracker-tsx-add-a-prominent-statistics-summary-panel-at-the-top-of-the-page-above-the-entry-list-that-displays-four-metrics-computed-from-the-user-s-day-tracker-entries-stored-in-localstorage-1-all-days-hours-the-total-sum-of-all-logged-hours-across-every-date-ever-recorded-2-this-week-hours-the-sum-of-logged-hours-for-entries-whose-date-falls-within-the-current-calendar-week-monday-to-sunday-3-today-hours-the-sum-of-logged-hours-for-entries-whose-date-matches-today-s-iso-date-and-4-today-minutes-the-equivalent-of-today-s-total-hours-expressed-in-minutes-e-g-2-5-hours-150-minutes-display-each-metric-in-its-own-card-with-a-clear-label-and-a-large-numeric-value-all-calculations-must-react-to-changes-in-the-entries-data-i-e-update-immediately-when-entries-are-added-edited-or-deleted-use-date-fns-or-dayjs-already-present-in-the-project-for-date-comparisons-and-week-boundary-calculations",
+      "featureTitle": "In frontend/src/pages/DayTracker.tsx, add a prominent statistics summary panel at the top of the page (above the entry list) that displays four metrics computed from the user's day tracker entries stored in localStorage: (1) 'All Days Hours' — the total sum of all logged hours across every date ever recorded, (2) 'This Week Hours' — the sum of logged hours for entries whose date falls within the current calendar week (Monday to Sunday), (3) 'Today Hours' — the sum of logged hours for entries whose date matches today's ISO date, and (4) 'Today Minutes' — the equivalent of today's total hours expressed in minutes (e.g., 2.5 hours → 150 minutes). Display each metric in its own card with a clear label and a large numeric value. All calculations must react to changes in the entries data (i.e., update immediately when entries are added, edited, or deleted). Use date-fns or dayjs (already present in the project) for date comparisons and week boundary calculations.",
       "files": [
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/components/ThemeToggle.tsx"
+        "frontend/src/pages/DayTracker.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -16,25 +15,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-39"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-in-frontend-src-pages-timetableupload-tsx-replace-any-text-or-error-message-that-currently-displays-no-or-a-negative-error-response-when-the-user-clicks-the-extract-timetable-ocr-button-with-a-clearly-styled-coming-soon-message-the-message-should-inform-the-user-that-this-feature-is-not-yet-available-displayed-inline-where-the-result-would-normally-appear-do-not-show-any-error-or-no-text-in-this-context",
-      "featureTitle": "In frontend/src/pages/TimetableUpload.tsx, replace any text or error message that currently displays 'No' (or a negative/error response) when the user clicks the 'Extract Timetable' / OCR button with a clearly styled 'Coming Soon' message. The message should inform the user that this feature is not yet available, displayed inline where the result would normally appear. Do not show any error or 'No' text in this context.",
-      "files": [
-        "frontend/src/pages/TimetableUpload.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-40"
+        "REQ-55"
       ],
       "confidence": "high"
     }

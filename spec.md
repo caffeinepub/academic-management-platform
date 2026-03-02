@@ -1,12 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Add a light/dark theme toggle to the app header and replace the OCR result "No" text with a "Coming Soon" message on the Timetable Upload page.
+**Goal:** Add a summary statistics panel to the Day Tracker page showing all-time, weekly, and daily hours and minutes.
 
 **Planned changes:**
-- Add a sun/moon icon toggle button in the top-right area of the app header, visible on all pages
-- Wire the toggle to the existing ThemeProvider and CSS custom properties for light/dark modes
-- Persist the selected theme in localStorage under the key `acadmind_theme` and restore it on page reload
-- On the TimetableUpload page, replace the "No" result text shown after clicking "Extract Timetable" with a styled "Coming Soon" message
+- Add a stats panel at the top of `DayTracker.tsx` (above the entry list) with four metric cards: "All Days Hours", "This Week Hours", "Today Hours", and "Today Minutes"
+- Compute each metric from the existing namespaced localStorage entries using date-fns or dayjs for date/week boundary calculations
+- Ensure all four values update immediately when entries are added, edited, or deleted
+- Style the panel consistently with the existing teal/slate-green theme, fully responsive
 
-**User-visible outcome:** Users can switch between light and dark themes from any page and have their preference remembered across visits. When they click "Extract Timetable" on the OCR Upload page, they see a "Coming Soon" message instead of a "No" error text.
+**User-visible outcome:** Users visiting the Day Tracker page will see four stat cards at the top displaying their total logged hours across all time, the current week, today, and today's hours converted to minutes — all updating in real time as entries change.

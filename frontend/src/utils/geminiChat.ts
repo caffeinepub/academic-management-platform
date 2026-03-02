@@ -1,25 +1,30 @@
-import type { TimetableSlot, Task } from '../backend';
+import type { LocalSlot, LocalTask } from '../hooks/useQueries';
 
-function formatSlotTime(startTime: bigint): string {
-  const total = Number(startTime);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+function formatSlotTime(startTime: number): string {
+  const h = Math.floor(startTime / 60);
+  const m = startTime % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
-function formatTaskDate(ns: bigint): string {
-  const ms = Number(ns / BigInt(1_000_000));
-  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatTaskDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function buildSystemPrompt(slots: TimetableSlot[], tasks: Task[]): string {
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+function buildSystemPrompt(slots: LocalSlot[], tasks: LocalTask[]): string {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   let prompt = `You are AcadMind AI, a helpful academic assistant for a student. Today is ${today}.\n\n`;
 
   if (slots.length > 0) {
     prompt += `## Student's Timetable\n`;
-    const byDay: Record<string, TimetableSlot[]> = {};
+    const byDay: Record<string, LocalSlot[]> = {};
     for (const slot of slots) {
       if (!byDay[slot.dayOfWeek]) byDay[slot.dayOfWeek] = [];
       byDay[slot.dayOfWeek].push(slot);
@@ -66,8 +71,8 @@ export async function callGeminiApi(
   apiKey: string,
   userMessage: string,
   history: ConversationTurn[],
-  slots: TimetableSlot[],
-  tasks: Task[]
+  slots: LocalSlot[],
+  tasks: LocalTask[]
 ): Promise<string> {
   const systemPrompt = buildSystemPrompt(slots, tasks);
 
@@ -103,11 +108,12 @@ export async function callGeminiApi(
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    const errMsg = (errData as { error?: { message?: string } })?.error?.message || `HTTP ${response.status}`;
+    const errMsg =
+      (errData as { error?: { message?: string } })?.error?.message || `HTTP ${response.status}`;
     throw new Error(errMsg);
   }
 
-  const data = await response.json() as {
+  const data = (await response.json()) as {
     candidates?: Array<{
       content?: { parts?: Array<{ text?: string }> };
     }>;

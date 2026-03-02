@@ -40,17 +40,18 @@ export default function TaskModal({
     dueDate: '',
   });
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Partial<TaskFormData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof TaskFormData, string>>>({});
 
   useEffect(() => {
     if (open) {
       setForm(initialData ?? { title: '', description: '', dueDate: '' });
       setErrors({});
+      setSaving(false);
     }
   }, [open, initialData]);
 
   const validate = (): boolean => {
-    const newErrors: Partial<TaskFormData> = {};
+    const newErrors: Partial<Record<keyof TaskFormData, string>> = {};
     if (!form.title.trim()) newErrors.title = 'Title is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -60,15 +61,21 @@ export default function TaskModal({
     if (!validate()) return;
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        dueDate: form.dueDate,
+      });
       onOpenChange(false);
+    } catch {
+      // error handled by caller
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!saving) onOpenChange(v); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display">
@@ -81,42 +88,54 @@ export default function TaskModal({
 
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="task-title">Title *</Label>
             <Input
-              id="title"
+              id="task-title"
               value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, title: e.target.value }));
+                if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
+              }}
               placeholder="e.g. Math Assignment 3"
-              className={errors.title ? 'border-destructive' : ''}
+              className={errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}
+              disabled={saving}
             />
-            {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+            {errors.title && (
+              <p className="text-xs text-destructive">{errors.title}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dueDate">Due Date</Label>
+            <Label htmlFor="task-dueDate">Due Date</Label>
             <Input
-              id="dueDate"
+              id="task-dueDate"
               type="date"
               value={form.dueDate}
               onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+              disabled={saving}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Description / Remarks</Label>
+            <Label htmlFor="task-description">Description / Remarks</Label>
             <Textarea
-              id="description"
+              id="task-description"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="Add notes, chapter references, or instructions..."
               rows={3}
               className="resize-none"
+              disabled={saving}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>

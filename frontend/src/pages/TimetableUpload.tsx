@@ -1,5 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Loader2, Save, RefreshCw, CheckCircle2, X, Sparkles } from 'lucide-react';
+import {
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  Save,
+  RefreshCw,
+  CheckCircle2,
+  X,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +92,7 @@ export default function TimetableUpload() {
           startTime: timeStringToMinutes(slot.startTime),
           location: slot.location,
           dayOfWeek: slot.dayOfWeek,
-          durationMinutes: BigInt(slot.durationMinutes),
+          durationMinutes: slot.durationMinutes,
         });
         successCount++;
       }
@@ -122,7 +131,10 @@ export default function TimetableUpload() {
 
           {!imagePreview ? (
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
@@ -201,136 +213,136 @@ export default function TimetableUpload() {
           </div>
 
           {showComingSoon ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-12 text-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                <Sparkles className="h-8 w-8 text-primary" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-10 text-center space-y-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <Sparkles className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <p className="font-display font-bold text-foreground text-lg mb-1">Coming Soon</p>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Automatic OCR extraction is under development. Stay tuned — it'll be available soon!
+                <p className="font-display font-semibold text-foreground text-lg">Coming Soon</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                  OCR timetable extraction is under development. In the meantime, use the{' '}
+                  <strong>Manual Timetable</strong> page to add your schedule.
                 </p>
               </div>
               <Badge variant="outline" className="text-primary border-primary/40">
-                🚀 In Development
+                🚧 Feature in progress
               </Badge>
             </div>
           ) : extractedSlots.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 p-12 text-center">
-              <ImageIcon className="h-10 w-10 text-muted-foreground/40 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                {imagePreview
-                  ? 'Click "Extract Timetable" to process your image'
-                  : 'Upload an image first, then extract the timetable'}
-              </p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 p-10 text-center space-y-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-muted-foreground">No slots extracted yet</p>
+                <p className="text-sm text-muted-foreground/70 mt-0.5">
+                  Upload an image and click "Extract Timetable"
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
+            <div className="space-y-3">
               {extractedSlots.map((slot, index) => (
                 <div
                   key={index}
-                  className="rounded-xl border border-border bg-card p-3 space-y-2 shadow-xs"
+                  className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm"
                 >
                   <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="text-xs">Slot {index + 1}</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Slot {index + 1}
+                    </Badge>
                     <button
                       onClick={() => handleRemoveSlot(index)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Subject</label>
+                    <div className="col-span-2">
                       <Input
                         value={slot.subject}
                         onChange={(e) => handleSlotChange(index, 'subject', e.target.value)}
-                        className="h-8 text-xs"
+                        placeholder="Subject"
+                        className="text-sm"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Day</label>
-                      <Select
-                        value={slot.dayOfWeek}
-                        onValueChange={(v) => handleSlotChange(index, 'dayOfWeek', v)}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DAYS.map((d) => (
-                            <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Start Time</label>
-                      <Input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={(e) => handleSlotChange(index, 'startTime', e.target.value)}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Duration</label>
-                      <Select
-                        value={String(slot.durationMinutes)}
-                        onValueChange={(v) => handleSlotChange(index, 'durationMinutes', Number(v))}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DURATIONS.map((d) => (
-                            <SelectItem key={d} value={String(d)} className="text-xs">
-                              {d >= 60 ? `${d / 60}h${d % 60 ? ` ${d % 60}m` : ''}` : `${d}m`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-muted-foreground mb-1 block">Location</label>
-                      <Input
-                        value={slot.location}
-                        onChange={(e) => handleSlotChange(index, 'location', e.target.value)}
-                        className="h-8 text-xs"
-                        placeholder="Optional"
-                      />
-                    </div>
+                    <Select
+                      value={slot.dayOfWeek}
+                      onValueChange={(v) => handleSlotChange(index, 'dayOfWeek', v)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAYS.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      value={slot.startTime}
+                      onChange={(e) => handleSlotChange(index, 'startTime', e.target.value)}
+                      className="text-sm"
+                    />
+                    <Select
+                      value={String(slot.durationMinutes)}
+                      onValueChange={(v) =>
+                        handleSlotChange(index, 'durationMinutes', Number(v))
+                      }
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATIONS.map((d) => (
+                          <SelectItem key={d} value={String(d)}>
+                            {d >= 60
+                              ? `${Math.floor(d / 60)}h${d % 60 ? ` ${d % 60}m` : ''}`
+                              : `${d}m`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={slot.location}
+                      onChange={(e) => handleSlotChange(index, 'location', e.target.value)}
+                      placeholder="Location (optional)"
+                      className="text-sm"
+                    />
                   </div>
                 </div>
               ))}
-            </div>
-          )}
 
-          {extractedSlots.length > 0 && (
-            <Button
-              onClick={handleSave}
-              disabled={saving || saved}
-              className="w-full gap-2"
-              variant={saved ? 'secondary' : 'default'}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving {extractedSlots.length} slots...
-                </>
-              ) : saved ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Saved to Timetable
-                </>
+              {/* Save button */}
+              {!saved ? (
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || extractedSlots.length === 0}
+                  className="w-full gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving {extractedSlots.length} slots...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save {extractedSlots.length} Slots to Timetable
+                    </>
+                  )}
+                </Button>
               ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save {extractedSlots.length} Slots to Timetable
-                </>
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-primary/10 py-3 text-sm font-medium text-primary">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Slots saved successfully!
+                </div>
               )}
-            </Button>
+            </div>
           )}
         </div>
       </div>

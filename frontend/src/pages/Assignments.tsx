@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Loader2,
   Filter,
+  UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,45 +25,45 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { useGetAllTasks, useCreateTask, useMarkTaskCompleted } from '../hooks/useQueries';
+import {
+  useGetAllTasks,
+  useCreateTask,
+  useMarkTaskCompleted,
+  useDeleteTask,
+  useUpdateTask,
+} from '../hooks/useQueries';
+import type { LocalTask } from '../hooks/useQueries';
 import TaskModal, { type TaskFormData } from '../components/TaskModal';
-import type { Task } from '../backend';
+import { useUser } from '../contexts/UserContext';
 
 type FilterType = 'all' | 'pending' | 'completed';
 
-function formatDate(ns: bigint): string {
-  const ms = Number(ns / BigInt(1_000_000));
-  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getDaysUntil(ns: bigint): number {
-  const ms = Number(ns / BigInt(1_000_000));
-  return Math.ceil((ms - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-function dateStringToNs(dateStr: string): bigint {
-  if (!dateStr) return 0n;
-  const ms = new Date(dateStr).getTime();
-  return BigInt(ms) * BigInt(1_000_000);
-}
-
-function nsToDateString(ns: bigint): string {
-  if (!ns) return '';
-  const ms = Number(ns / BigInt(1_000_000));
-  const d = new Date(ms);
-  return d.toISOString().split('T')[0];
+function getDaysUntil(dateStr: string): number {
+  if (!dateStr) return Infinity;
+  const due = new Date(dateStr + 'T00:00:00').getTime();
+  return Math.ceil((due - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export default function Assignments() {
+  const { userId } = useUser();
   const { data: tasks = [], isLoading } = useGetAllTasks();
   const createTask = useCreateTask();
   const markCompleted = useMarkTaskCompleted();
+  const deleteTask = useDeleteTask();
+  const updateTask = useUpdateTask();
 
   const [filter, setFilter] = useState<FilterType>('all');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [completingId, setCompletingId] = useState<bigint | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<LocalTask | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LocalTask | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredTasks = useMemo(() => {
     let result = [...tasks];
@@ -70,10 +71,10 @@ export default function Assignments() {
     if (filter === 'completed') result = result.filter((t) => t.completed);
     return result.sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      if (a.dueDate && b.dueDate) return Number(a.dueDate - b.dueDate);
+      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
       if (a.dueDate) return -1;
       if (b.dueDate) return 1;
-      return 0;
+      return b.createdAt - a.createdAt;
     });
   }, [tasks, filter]);
 
@@ -82,36 +83,25 @@ export default function Assignments() {
 
   const handleSave = async (data: TaskFormData) => {
     if (editingTask) {
-      // Edit = mark complete + recreate (backend doesn't have updateTask)
-      // We just create a new task since there's no update endpoint
-      try {
-        await createTask.mutateAsync({
-          title: data.title,
-          dueDate: data.dueDate ? dateStringToNs(data.dueDate) : null,
-          description: data.description,
-        });
-        toast.success('Task updated (new entry created)');
-      } catch {
-        toast.error('Failed to save task');
-        throw new Error('Save failed');
-      }
+      await updateTask.mutateAsync({
+        id: editingTask.id,
+        title: data.title,
+        dueDate: data.dueDate,
+        description: data.description,
+      });
+      toast.success('Task updated successfully');
     } else {
-      try {
-        await createTask.mutateAsync({
-          title: data.title,
-          dueDate: data.dueDate ? dateStringToNs(data.dueDate) : null,
-          description: data.description,
-        });
-        toast.success('Task added successfully');
-      } catch {
-        toast.error('Failed to add task');
-        throw new Error('Create failed');
-      }
+      await createTask.mutateAsync({
+        title: data.title,
+        dueDate: data.dueDate,
+        description: data.description,
+      });
+      toast.success('Task added successfully');
     }
     setEditingTask(null);
   };
 
-  const handleToggleComplete = async (task: Task) => {
+  const handleToggleComplete = async (task: LocalTask) => {
     if (task.completed) return;
     setCompletingId(task.id);
     try {
@@ -124,13 +114,42 @@ export default function Assignments() {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      await deleteTask.mutateAsync(deleteTarget.id);
+      toast.success('Task deleted');
+      setDeleteTarget(null);
+    } catch {
+      toast.error('Failed to delete task');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const editInitialData: TaskFormData | undefined = editingTask
     ? {
         title: editingTask.title,
         description: editingTask.description,
-        dueDate: editingTask.dueDate ? nsToDateString(editingTask.dueDate) : '',
+        dueDate: editingTask.dueDate,
       }
     : undefined;
+
+  // No user state
+  if (!userId) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+        <UserCircle className="h-16 w-16 text-muted-foreground/40" />
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">Sign in to view your tasks</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your tasks are saved per user. Please set up your profile to get started.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -143,7 +162,10 @@ export default function Assignments() {
           </p>
         </div>
         <Button
-          onClick={() => { setEditingTask(null); setModalOpen(true); }}
+          onClick={() => {
+            setEditingTask(null);
+            setModalOpen(true);
+          }}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -157,13 +179,22 @@ export default function Assignments() {
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
           <TabsList className="h-8">
             <TabsTrigger value="all" className="text-xs px-3 h-6">
-              All <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">{tasks.length}</Badge>
+              All{' '}
+              <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">
+                {tasks.length}
+              </Badge>
             </TabsTrigger>
             <TabsTrigger value="pending" className="text-xs px-3 h-6">
-              Pending <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">{pendingCount}</Badge>
+              Pending{' '}
+              <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">
+                {pendingCount}
+              </Badge>
             </TabsTrigger>
             <TabsTrigger value="completed" className="text-xs px-3 h-6">
-              Completed <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">{completedCount}</Badge>
+              Completed{' '}
+              <Badge variant="secondary" className="ml-1.5 text-xs py-0 px-1.5 h-4">
+                {completedCount}
+              </Badge>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -177,24 +208,26 @@ export default function Assignments() {
           ))}
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 py-16 text-center">
-          <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="font-display font-semibold text-foreground mb-1">
-            {filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            {filter === 'all'
-              ? 'Add your first assignment or quiz to get started'
-              : `You have no ${filter} tasks right now`}
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+          <ClipboardList className="h-12 w-12 text-muted-foreground/30" />
+          <div>
+            <p className="font-medium text-muted-foreground">
+              {filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}
+            </p>
+            <p className="text-sm text-muted-foreground/70 mt-0.5">
+              {filter === 'all' ? 'Click "Add Task" to create your first task.' : 'Try a different filter.'}
+            </p>
+          </div>
           {filter === 'all' && (
             <Button
               size="sm"
-              onClick={() => { setEditingTask(null); setModalOpen(true); }}
-              className="gap-2"
+              variant="outline"
+              onClick={() => {
+                setEditingTask(null);
+                setModalOpen(true);
+              }}
             >
-              <Plus className="h-4 w-4" />
-              Add Task
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Task
             </Button>
           )}
         </div>
@@ -203,91 +236,101 @@ export default function Assignments() {
           {filteredTasks.map((task) => {
             const daysUntil = task.dueDate ? getDaysUntil(task.dueDate) : null;
             const isOverdue = daysUntil !== null && daysUntil < 0 && !task.completed;
-            const isUrgent = daysUntil !== null && daysUntil <= 2 && daysUntil >= 0 && !task.completed;
+            const isUrgent = daysUntil !== null && daysUntil >= 0 && daysUntil <= 2 && !task.completed;
+            const isCompleting = completingId === task.id;
 
             return (
               <div
-                key={String(task.id)}
-                className={`group flex items-start gap-4 rounded-xl border bg-card p-4 shadow-xs transition-all hover:shadow-card ${
-                  task.completed
-                    ? 'opacity-60 border-border'
-                    : isOverdue
-                    ? 'border-destructive/30 bg-destructive/5'
-                    : isUrgent
-                    ? 'border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20'
-                    : 'border-border'
-                }`}
+                key={task.id}
+                className={`group flex items-start gap-3 rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-card-hover ${
+                  task.completed ? 'opacity-60' : ''
+                } ${isOverdue ? 'border-destructive/40' : 'border-border'}`}
               >
                 {/* Complete toggle */}
                 <button
                   onClick={() => handleToggleComplete(task)}
-                  disabled={task.completed || completingId === task.id}
-                  className="mt-0.5 shrink-0 transition-colors"
+                  disabled={task.completed || isCompleting}
+                  className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:cursor-default"
+                  aria-label={task.completed ? 'Completed' : 'Mark as complete'}
                 >
-                  {completingId === task.id ? (
+                  {isCompleting ? (
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   ) : task.completed ? (
                     <CheckCircle2 className="h-5 w-5 text-primary" />
                   ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+                    <Circle className="h-5 w-5" />
                   )}
                 </button>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className={`font-medium text-sm leading-snug ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <p
+                      className={`text-sm font-medium leading-snug ${
+                        task.completed ? 'line-through text-muted-foreground' : 'text-foreground'
+                      }`}
+                    >
                       {task.title}
-                    </h3>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {task.completed ? (
-                        <Badge variant="secondary" className="text-xs">Done</Badge>
-                      ) : isOverdue ? (
-                        <Badge variant="destructive" className="text-xs">Overdue</Badge>
-                      ) : isUrgent ? (
-                        <Badge className="text-xs bg-amber-500 hover:bg-amber-500">
-                          {daysUntil === 0 ? 'Due Today' : 'Due Soon'}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">Pending</Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
-                  )}
-
-                  <div className="flex items-center gap-3 mt-2">
-                    {task.dueDate && (
-                      <span className={`text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                        Due {formatDate(task.dueDate)}
-                        {daysUntil !== null && !task.completed && (
-                          <span className="ml-1">
-                            ({daysUntil === 0 ? 'today' : daysUntil < 0 ? `${Math.abs(daysUntil)}d ago` : `in ${daysUntil}d`})
-                          </span>
-                        )}
-                      </span>
+                    </p>
+                    {isOverdue && (
+                      <Badge variant="destructive" className="text-xs py-0 h-4">
+                        Overdue
+                      </Badge>
+                    )}
+                    {isUrgent && (
+                      <Badge className="text-xs py-0 h-4 bg-amber-500 text-white">
+                        Due soon
+                      </Badge>
                     )}
                   </div>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      {task.description}
+                    </p>
+                  )}
+                  {task.dueDate && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Due {formatDate(task.dueDate)}
+                      {daysUntil !== null && !task.completed && (
+                        <span className={`ml-1 ${isOverdue ? 'text-destructive' : isUrgent ? 'text-amber-600' : ''}`}>
+                          {daysUntil === 0
+                            ? '(Today)'
+                            : daysUntil === 1
+                            ? '(Tomorrow)'
+                            : daysUntil < 0
+                            ? `(${Math.abs(daysUntil)}d ago)`
+                            : `(in ${daysUntil}d)`}
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!task.completed && (
-                    <button
-                      onClick={() => { setEditingTask(task); setModalOpen(true); }}
-                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setEditingTask(task);
+                        setModalOpen(true);
+                      }}
+                      title="Edit task"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => setDeleteTarget(task)}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    title="Delete task"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
@@ -298,9 +341,9 @@ export default function Assignments() {
       {/* Task Modal */}
       <TaskModal
         open={modalOpen}
-        onOpenChange={(open) => {
-          setModalOpen(open);
-          if (!open) setEditingTask(null);
+        onOpenChange={(v) => {
+          setModalOpen(v);
+          if (!v) setEditingTask(null);
         }}
         initialData={editInitialData}
         onSave={handleSave}
@@ -308,25 +351,30 @@ export default function Assignments() {
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogTitle>Delete Task?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.title}</strong>? This action cannot be undone.
+              This will permanently remove &ldquo;{deleteTarget?.title}&rdquo;. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={!!deletingId}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                // Backend doesn't have deleteTask, so we just close
-                toast.info('Task removal is not supported by the backend yet');
-                setDeleteTarget(null);
-              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+              disabled={!!deletingId}
             >
-              Delete
+              {deletingId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,54 +1,87 @@
 import { useNavigate } from '@tanstack/react-router';
-import { MessageSquare, Upload, Plus, ClipboardList, Clock, BookOpen, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  MessageSquare,
+  Upload,
+  Plus,
+  ClipboardList,
+  Clock,
+  BookOpen,
+  CheckCircle2,
+  AlertCircle,
+  UserCircle,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetAllSlots, useGetAllTasks } from '../hooks/useQueries';
+import type { LocalSlot, LocalTask } from '../hooks/useQueries';
+import { useUser } from '../contexts/UserContext';
 
-function formatTime(minutes: bigint): string {
-  const total = Number(minutes);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+function formatTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
   const period = h >= 12 ? 'PM' : 'AM';
   const displayH = h % 12 || 12;
   return `${displayH}:${m.toString().padStart(2, '0')} ${period}`;
 }
 
-function formatDate(ns: bigint): string {
-  const ms = Number(ns / BigInt(1_000_000));
-  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function getDaysUntil(ns: bigint): number {
-  const ms = Number(ns / BigInt(1_000_000));
-  const diff = ms - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+function getDaysUntil(dateStr: string): number {
+  if (!dateStr) return Infinity;
+  const due = new Date(dateStr + 'T00:00:00').getTime();
+  return Math.ceil((due - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { userId } = useUser();
   const { data: slots = [], isLoading: slotsLoading } = useGetAllSlots();
   const { data: tasks = [], isLoading: tasksLoading } = useGetAllTasks();
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-  const todaySlots = slots
+  const todaySlots = (slots as LocalSlot[])
     .filter((s) => s.dayOfWeek.toLowerCase() === today.toLowerCase())
-    .sort((a, b) => Number(a.startTime - b.startTime));
+    .sort((a, b) => a.startTime - b.startTime);
 
-  const upcomingTasks = tasks
-    .filter((t) => !t.completed && t.dueDate != null)
-    .sort((a, b) => Number((a.dueDate ?? 0n) - (b.dueDate ?? 0n)))
+  const upcomingTasks = (tasks as LocalTask[])
+    .filter((t) => !t.completed && t.dueDate)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
     .slice(0, 3);
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
   const completedCount = tasks.filter((t) => t.completed).length;
 
   const quickActions = [
-    { label: 'Open Chat', icon: MessageSquare, path: '/chat', color: 'bg-primary/10 text-primary hover:bg-primary/20' },
-    { label: 'Upload Timetable', icon: Upload, path: '/timetable/upload', color: 'bg-accent text-accent-foreground hover:bg-accent/80' },
-    { label: 'Create Slot', icon: Plus, path: '/timetable/manual', color: 'bg-secondary text-secondary-foreground hover:bg-secondary/80' },
-    { label: 'View Assignments', icon: ClipboardList, path: '/assignments', color: 'bg-primary/10 text-primary hover:bg-primary/20' },
+    {
+      label: 'Open Chat',
+      icon: MessageSquare,
+      path: '/chat',
+      color: 'bg-primary/10 text-primary hover:bg-primary/20',
+    },
+    {
+      label: 'Upload Timetable',
+      icon: Upload,
+      path: '/timetable/upload',
+      color: 'bg-accent text-accent-foreground hover:bg-accent/80',
+    },
+    {
+      label: 'Create Slot',
+      icon: Plus,
+      path: '/timetable/manual',
+      color: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    },
+    {
+      label: 'View Assignments',
+      icon: ClipboardList,
+      path: '/assignments',
+      color: 'bg-primary/10 text-primary hover:bg-primary/20',
+    },
   ];
 
   return (
@@ -70,9 +103,16 @@ export default function Dashboard() {
               className="h-10 w-10 rounded-xl object-cover"
             />
             <div>
-              <h1 className="font-display text-2xl font-bold">Welcome back!</h1>
+              <h1 className="font-display text-2xl font-bold">
+                Welcome back{userId ? `, ${userId.split('@')[0]}` : ''}!
+              </h1>
               <p className="text-sidebar-foreground/70 text-sm">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
               </p>
             </div>
           </div>
@@ -94,6 +134,30 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* No user banner */}
+      {!userId && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3">
+          <UserCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Set up your profile to save tasks and timetable data per user. Go to{' '}
+            <button
+              onClick={() => navigate({ to: '/assignments' })}
+              className="underline font-medium"
+            >
+              Assignments
+            </button>{' '}
+            or{' '}
+            <button
+              onClick={() => navigate({ to: '/timetable/manual' })}
+              className="underline font-medium"
+            >
+              Timetable
+            </button>{' '}
+            to get started.
+          </p>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div>
@@ -131,6 +195,11 @@ export default function Dashboard() {
                   <Skeleton key={i} className="h-14 w-full rounded-lg" />
                 ))}
               </div>
+            ) : !userId ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <UserCircle className="h-10 w-10 text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">Set up your profile to see your schedule</p>
+              </div>
             ) : todaySlots.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <BookOpen className="h-10 w-10 text-muted-foreground/40 mb-2" />
@@ -148,7 +217,7 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {todaySlots.map((slot) => (
                   <div
-                    key={String(slot.id)}
+                    key={slot.id}
                     className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5"
                   >
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -161,7 +230,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <Badge variant="outline" className="shrink-0 text-xs">
-                      {Number(slot.durationMinutes)}m
+                      {slot.durationMinutes}m
                     </Badge>
                   </div>
                 ))}
@@ -188,6 +257,11 @@ export default function Dashboard() {
                   <Skeleton key={i} className="h-14 w-full rounded-lg" />
                 ))}
               </div>
+            ) : !userId ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <UserCircle className="h-10 w-10 text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">Set up your profile to see your tasks</p>
+              </div>
             ) : upcomingTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <CheckCircle2 className="h-10 w-10 text-muted-foreground/40 mb-2" />
@@ -210,10 +284,14 @@ export default function Dashboard() {
                   const isUrgent = daysUntil !== null && daysUntil <= 2;
                   return (
                     <div
-                      key={String(task.id)}
+                      key={task.id}
                       className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5"
                     >
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isUrgent ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                          isUrgent ? 'bg-destructive/10' : 'bg-primary/10'
+                        }`}
+                      >
                         {isUrgent ? (
                           <AlertCircle className="h-4 w-4 text-destructive" />
                         ) : (
@@ -231,7 +309,11 @@ export default function Dashboard() {
                           variant={isUrgent ? 'destructive' : 'secondary'}
                           className="shrink-0 text-xs"
                         >
-                          {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
+                          {daysUntil === 0
+                            ? 'Today'
+                            : daysUntil === 1
+                            ? 'Tomorrow'
+                            : `${daysUntil}d`}
                         </Badge>
                       )}
                     </div>

@@ -53,8 +53,8 @@ export async function mockExtractTimetable(_file: File): Promise<ExtractedSlot[]
   return slots;
 }
 
-/** Convert "HH:MM" string to minutes since midnight as bigint */
-export function timeStringToMinutes(time: string): bigint {
+/** Convert "HH:MM" string to minutes since midnight as a plain number */
+export function timeStringToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
-  return BigInt(h * 60 + m);
+  return h * 60 + (m || 0);
 }

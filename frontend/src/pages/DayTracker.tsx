@@ -1,25 +1,130 @@
-// frontend/src/pages/DayTracker.tsx
 import React, { useState, useMemo } from 'react';
-import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
-import { Plus, ChevronLeft, ChevronRight, Clock, BookOpen, Pencil, Trash2 } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, addDays, isSameDay, isWithinInterval, parseISO } from 'date-fns';
+import { Plus, ChevronLeft, ChevronRight, Clock, BookOpen, Pencil, Trash2, UserCircle, CalendarDays, Calendar, Timer, AlarmClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useGetDayEntries, useAddDayEntry, useUpdateDayEntry, useDeleteDayEntry } from '@/hooks/useQueries';
+import type { LocalDayEntry } from '@/hooks/useQueries';
+import { useUser } from '@/contexts/UserContext';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface LocalDayEntry {
-  id: string;
-  date: string;       // ISO date string "YYYY-MM-DD"
-  hours: number;
-  description?: string;
-  completed: boolean;
+// ─── StatsPanel ───────────────────────────────────────────────────────────────
+interface StatCardProps {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent?: boolean;
+}
+
+function StatCard({ label, value, icon, accent = false }: StatCardProps) {
+  return (
+    <Card className={accent ? 'border-primary/30 bg-primary/5' : ''}>
+      <CardContent className="pt-4 pb-4 px-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide leading-none mb-2">
+              {label}
+            </p>
+            <p className={`text-2xl font-bold font-display tabular-nums ${accent ? 'text-primary' : 'text-foreground'}`}>
+              {value}
+            </p>
+          </div>
+          <div className={`shrink-0 rounded-lg p-2 ${accent ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface StatsPanelProps {
+  entries: LocalDayEntry[];
+}
+
+function StatsPanel({ entries }: StatsPanelProps) {
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+  const allDaysHours = useMemo(
+    () => entries.reduce((sum, e) => sum + e.hours, 0),
+    [entries]
+  );
+
+  const thisWeekHours = useMemo(
+    () =>
+      entries
+        .filter((e) => {
+          try {
+            const d = parseISO(e.date);
+            return isWithinInterval(d, { start: weekStart, end: weekEnd });
+          } catch {
+            return false;
+          }
+        })
+        .reduce((sum, e) => sum + e.hours, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [entries, weekStart.toISOString(), weekEnd.toISOString()]
+  );
+
+  const todayHours = useMemo(
+    () => entries.filter((e) => e.date === todayStr).reduce((sum, e) => sum + e.hours, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [entries, todayStr]
+  );
+
+  const todayMinutes = Math.round(todayHours * 60);
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <StatCard
+        label="All Days Hours"
+        value={allDaysHours.toFixed(1)}
+        icon={<CalendarDays className="h-4 w-4" />}
+      />
+      <StatCard
+        label="This Week Hours"
+        value={thisWeekHours.toFixed(1)}
+        icon={<Calendar className="h-4 w-4" />}
+      />
+      <StatCard
+        label="Today Hours"
+        value={todayHours.toFixed(1)}
+        icon={<Clock className="h-4 w-4" />}
+        accent
+      />
+      <StatCard
+        label="Today Minutes"
+        value={String(todayMinutes)}
+        icon={<Timer className="h-4 w-4" />}
+        accent
+      />
+    </div>
+  );
 }
 
 // ─── EntryModal ───────────────────────────────────────────────────────────────
@@ -33,7 +138,15 @@ interface EntryModalProps {
   isSaving?: boolean;
 }
 
-function EntryModal({ open, onClose, onSave, initialHours = 1, initialDescription = '', isEditing = false, isSaving = false }: EntryModalProps) {
+function EntryModal({
+  open,
+  onClose,
+  onSave,
+  initialHours = 1,
+  initialDescription = '',
+  isEditing = false,
+  isSaving = false,
+}: EntryModalProps) {
   const [hours, setHours] = useState(initialHours);
   const [description, setDescription] = useState(initialDescription);
 
@@ -71,6 +184,7 @@ function EntryModal({ open, onClose, onSave, initialHours = 1, initialDescriptio
               value={hours}
               onChange={(e) => setHours(parseFloat(e.target.value) || 0)}
               required
+              disabled={isSaving}
             />
           </div>
           <div className="space-y-1.5">
@@ -84,6 +198,7 @@ function EntryModal({ open, onClose, onSave, initialHours = 1, initialDescriptio
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              disabled={isSaving}
             />
           </div>
           <DialogFooter>
@@ -91,7 +206,13 @@ function EntryModal({ open, onClose, onSave, initialHours = 1, initialDescriptio
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? (isEditing ? 'Saving…' : 'Logging…') : isEditing ? 'Save Changes' : 'Log Hours'}
+              {isSaving
+                ? isEditing
+                  ? 'Saving…'
+                  : 'Logging…'
+                : isEditing
+                ? 'Save Changes'
+                : 'Log Hours'}
             </Button>
           </DialogFooter>
         </form>
@@ -122,17 +243,21 @@ function DailySummary({ entries, date }: DailySummaryProps) {
       <CardContent className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Total learning time</span>
-          <Badge variant="default" className="font-mono">{totalHours.toFixed(1)}h</Badge>
+          <Badge variant="default" className="font-mono">
+            {totalHours.toFixed(1)}h
+          </Badge>
         </div>
-        {entries.filter(e => e.description).map(e => (
-          <div key={e.id} className="flex items-start gap-2 text-sm">
-            <BookOpen className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
-            <span className="text-muted-foreground">
-              {e.description}{' '}
-              <span className="text-foreground font-medium">({e.hours}h)</span>
-            </span>
-          </div>
-        ))}
+        {entries
+          .filter((e) => e.description)
+          .map((e) => (
+            <div key={e.id} className="flex items-start gap-2 text-sm">
+              <BookOpen className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+              <span className="text-muted-foreground">
+                {e.description}{' '}
+                <span className="text-foreground font-medium">({e.hours}h)</span>
+              </span>
+            </div>
+          ))}
       </CardContent>
     </Card>
   );
@@ -188,6 +313,7 @@ function EntryCard({ entry, onEdit, onDelete, isDeleting }: EntryCardProps) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DayTracker() {
+  const { userId } = useUser();
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -276,6 +402,21 @@ export default function DayTracker() {
 
   const isSaving = addEntry.isPending || updateEntry.isPending;
 
+  // No user state
+  if (!userId) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+        <UserCircle className="h-16 w-16 text-muted-foreground/40" />
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">Sign in to track your progress</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your learning entries are saved per user. Please set up your profile to get started.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
@@ -289,6 +430,9 @@ export default function DayTracker() {
         </Button>
       </div>
 
+      {/* Stats Summary Panel */}
+      <StatsPanel entries={entries} />
+
       {/* Week Navigator */}
       <Card>
         <CardContent className="pt-4 pb-3">
@@ -301,7 +445,8 @@ export default function DayTracker() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium">
-              {format(currentWeekStart, 'MMM d')} – {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
+              {format(currentWeekStart, 'MMM d')} –{' '}
+              {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
             </span>
             <Button
               variant="ghost"

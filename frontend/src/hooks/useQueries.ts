@@ -1,138 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActor } from './useActor';
-import type { TimetableSlot, Task, ChatMessage } from '../backend';
+import { useUser } from '../contexts/UserContext';
 
-// ─── Timetable Slots ────────────────────────────────────────────────────────
+// ─── Local Task Types ─────────────────────────────────────────────────────────
 
-export function useGetAllSlots() {
-  const { actor, isFetching } = useActor();
-  return useQuery<TimetableSlot[]>({
-    queryKey: ['slots'],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllSlots();
-    },
-    enabled: !!actor && !isFetching,
-  });
+export interface LocalTask {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string; // ISO date string "YYYY-MM-DD" or ""
+  completed: boolean;
+  createdAt: number; // timestamp ms
 }
 
-export function useCreateSlot() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (params: {
-      subject: string;
-      startTime: bigint;
-      location: string;
-      dayOfWeek: string;
-      durationMinutes: bigint;
-    }) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.createSlot(
-        params.subject,
-        params.startTime,
-        params.location,
-        params.dayOfWeek,
-        params.durationMinutes
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['slots'] });
-    },
-  });
+// ─── Local Slot Types ─────────────────────────────────────────────────────────
+
+export interface LocalSlot {
+  id: string;
+  subject: string;
+  dayOfWeek: string;
+  startTime: number; // minutes from midnight
+  durationMinutes: number;
+  location: string;
+  createdAt: number;
 }
 
-export function useDeleteSlot() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (slotId: bigint) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.deleteSlot(slotId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['slots'] });
-    },
-  });
-}
-
-// ─── Tasks ───────────────────────────────────────────────────────────────────
-
-export function useGetAllTasks() {
-  const { actor, isFetching } = useActor();
-  return useQuery<Task[]>({
-    queryKey: ['tasks'],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllTasks();
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
-
-export function useCreateTask() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (params: {
-      title: string;
-      dueDate: bigint | null;
-      description: string;
-    }) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.createTask(params.title, params.dueDate, params.description);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-}
-
-export function useMarkTaskCompleted() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (taskId: bigint) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.markTaskAsCompleted(taskId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-}
-
-// ─── Chat Messages ────────────────────────────────────────────────────────────
-
-export function useGetAllMessages() {
-  const { actor, isFetching } = useActor();
-  return useQuery<ChatMessage[]>({
-    queryKey: ['messages'],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllMessages();
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
-
-export function useSendMessage() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (params: { sender: string; content: string }) => {
-      if (!actor) throw new Error('Actor not initialized');
-      return actor.sendMessage(params.sender, params.content);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-    },
-  });
-}
-
-// ─── Day Tracker (localStorage) ──────────────────────────────────────────────
-
-const LS_KEY = 'acadmind_day_entries';
+// ─── Local Day Entry Types ────────────────────────────────────────────────────
 
 export interface LocalDayEntry {
   id: string;
@@ -142,42 +34,256 @@ export interface LocalDayEntry {
   completed: boolean;
 }
 
-function loadEntries(): LocalDayEntry[] {
+// ─── Storage Key Helpers ──────────────────────────────────────────────────────
+
+function tasksKey(userId: string | null): string {
+  return userId ? `acadmind_tasks_${userId}` : 'acadmind_tasks_guest';
+}
+
+function slotsKey(userId: string | null): string {
+  return userId ? `acadmind_slots_${userId}` : 'acadmind_slots_guest';
+}
+
+function dayEntriesKey(userId: string | null): string {
+  return userId ? `acadmind_day_entries_${userId}` : 'acadmind_day_entries_guest';
+}
+
+// ─── Generic localStorage helpers ────────────────────────────────────────────
+
+function loadFromStorage<T>(key: string, migrateFn?: (raw: unknown[]) => T[]): T[] {
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    // Migrate old entries that may have taskDescription instead of hours/description
-    return parsed.map((e: Record<string, unknown>) => ({
-      id: String(e.id ?? Math.random()),
-      date: String(e.date ?? ''),
-      hours: typeof e.hours === 'number' ? e.hours : 0,
-      description: typeof e.description === 'string' ? e.description : (typeof e.taskDescription === 'string' ? e.taskDescription : ''),
-      completed: Boolean(e.completed ?? false),
-    }));
+    if (migrateFn) return migrateFn(parsed);
+    return parsed as T[];
   } catch {
     return [];
   }
 }
 
-function saveEntries(entries: LocalDayEntry[]): void {
-  localStorage.setItem(LS_KEY, JSON.stringify(entries));
+function saveToStorage<T>(key: string, data: T[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+// ─── Tasks (localStorage) ─────────────────────────────────────────────────────
+
+function loadTasks(userId: string | null): LocalTask[] {
+  return loadFromStorage<LocalTask>(tasksKey(userId), (raw) =>
+    (raw as Record<string, unknown>[]).map((e) => ({
+      id: String(e.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+      title: typeof e.title === 'string' ? e.title : '',
+      description: typeof e.description === 'string' ? e.description : '',
+      dueDate: typeof e.dueDate === 'string' ? e.dueDate : '',
+      completed: Boolean(e.completed ?? false),
+      createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
+    }))
+  );
+}
+
+function saveTasks(userId: string | null, tasks: LocalTask[]): void {
+  saveToStorage(tasksKey(userId), tasks);
+}
+
+export function useGetAllTasks() {
+  const { userId } = useUser();
+  return useQuery<LocalTask[]>({
+    queryKey: ['tasks', userId],
+    queryFn: () => loadTasks(userId),
+    staleTime: 0,
+  });
+}
+
+export function useCreateTask() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { title: string; dueDate: string; description: string }) => {
+      const tasks = loadTasks(userId);
+      const newTask: LocalTask = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        title: params.title,
+        description: params.description,
+        dueDate: params.dueDate,
+        completed: false,
+        createdAt: Date.now(),
+      };
+      saveTasks(userId, [...tasks, newTask]);
+      return newTask;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', userId] });
+    },
+  });
+}
+
+export function useMarkTaskCompleted() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const tasks = loadTasks(userId);
+      const updated = tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true } : t
+      );
+      saveTasks(userId, updated);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', userId] });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const tasks = loadTasks(userId);
+      saveTasks(userId, tasks.filter((t) => t.id !== taskId));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', userId] });
+    },
+  });
+}
+
+export function useUpdateTask() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { id: string; title: string; dueDate: string; description: string }) => {
+      const tasks = loadTasks(userId);
+      const updated = tasks.map((t) =>
+        t.id === params.id
+          ? { ...t, title: params.title, dueDate: params.dueDate, description: params.description }
+          : t
+      );
+      saveTasks(userId, updated);
+      return updated.find((t) => t.id === params.id)!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', userId] });
+    },
+  });
+}
+
+// ─── Slots (localStorage) ─────────────────────────────────────────────────────
+
+function loadSlots(userId: string | null): LocalSlot[] {
+  return loadFromStorage<LocalSlot>(slotsKey(userId), (raw) =>
+    (raw as Record<string, unknown>[]).map((e) => ({
+      id: String(e.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+      subject: typeof e.subject === 'string' ? e.subject : '',
+      dayOfWeek: typeof e.dayOfWeek === 'string' ? e.dayOfWeek : '',
+      startTime: typeof e.startTime === 'number' ? e.startTime : 0,
+      durationMinutes: typeof e.durationMinutes === 'number' ? e.durationMinutes : 60,
+      location: typeof e.location === 'string' ? e.location : '',
+      createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
+    }))
+  );
+}
+
+function saveSlots(userId: string | null, slots: LocalSlot[]): void {
+  saveToStorage(slotsKey(userId), slots);
+}
+
+export function useGetAllSlots() {
+  const { userId } = useUser();
+  return useQuery<LocalSlot[]>({
+    queryKey: ['slots', userId],
+    queryFn: () => loadSlots(userId),
+    staleTime: 0,
+  });
+}
+
+export function useCreateSlot() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      subject: string;
+      startTime: number; // minutes from midnight
+      location: string;
+      dayOfWeek: string;
+      durationMinutes: number;
+    }) => {
+      const slots = loadSlots(userId);
+      const newSlot: LocalSlot = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        subject: params.subject,
+        dayOfWeek: params.dayOfWeek,
+        startTime: params.startTime,
+        durationMinutes: params.durationMinutes,
+        location: params.location,
+        createdAt: Date.now(),
+      };
+      saveSlots(userId, [...slots, newSlot]);
+      return newSlot;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['slots', userId] });
+    },
+  });
+}
+
+export function useDeleteSlot() {
+  const { userId } = useUser();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (slotId: string) => {
+      const slots = loadSlots(userId);
+      saveSlots(userId, slots.filter((s) => s.id !== slotId));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['slots', userId] });
+    },
+  });
+}
+
+// ─── Day Tracker (localStorage) ──────────────────────────────────────────────
+
+function loadEntries(userId: string | null): LocalDayEntry[] {
+  return loadFromStorage<LocalDayEntry>(dayEntriesKey(userId), (raw) =>
+    (raw as Record<string, unknown>[]).map((e) => ({
+      id: String(e.id ?? Math.random()),
+      date: String(e.date ?? ''),
+      hours: typeof e.hours === 'number' ? e.hours : 0,
+      description:
+        typeof e.description === 'string'
+          ? e.description
+          : typeof e.taskDescription === 'string'
+          ? e.taskDescription
+          : '',
+      completed: Boolean(e.completed ?? false),
+    }))
+  );
+}
+
+function saveEntries(userId: string | null, entries: LocalDayEntry[]): void {
+  saveToStorage(dayEntriesKey(userId), entries);
 }
 
 export function useGetDayEntries() {
+  const { userId } = useUser();
   return useQuery<LocalDayEntry[]>({
-    queryKey: ['day-entries'],
-    queryFn: () => loadEntries(),
+    queryKey: ['day-entries', userId],
+    queryFn: () => loadEntries(userId),
     staleTime: 0,
   });
 }
 
 export function useAddDayEntry() {
+  const { userId } = useUser();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: { date: string; hours: number; description: string }) => {
-      const entries = loadEntries();
+      const entries = loadEntries(userId);
       const newEntry: LocalDayEntry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         date: params.date,
@@ -185,41 +291,43 @@ export function useAddDayEntry() {
         description: params.description,
         completed: false,
       };
-      saveEntries([...entries, newEntry]);
+      saveEntries(userId, [...entries, newEntry]);
       return newEntry;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['day-entries', userId] });
     },
   });
 }
 
 export function useUpdateDayEntry() {
+  const { userId } = useUser();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: { id: string; hours: number; description: string }) => {
-      const entries = loadEntries();
+      const entries = loadEntries(userId);
       const updated = entries.map((e) =>
         e.id === params.id ? { ...e, hours: params.hours, description: params.description } : e
       );
-      saveEntries(updated);
+      saveEntries(userId, updated);
       return updated.find((e) => e.id === params.id)!;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['day-entries', userId] });
     },
   });
 }
 
 export function useDeleteDayEntry() {
+  const { userId } = useUser();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const entries = loadEntries();
-      saveEntries(entries.filter((e) => e.id !== id));
+      const entries = loadEntries(userId);
+      saveEntries(userId, entries.filter((e) => e.id !== id));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['day-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['day-entries', userId] });
     },
   });
 }

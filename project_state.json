@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 27,
+  "projectStateVersion": 41,
   "summary": "A student-focused intelligent academic management web platform with five core modules: AI Chat System (Gemini 2.5 Flash), OCR-Based Timetable Extraction (Gemini-powered), Manual Timetable Slot Management, Quiz & Assignment Tracking, and Day Tracker. Includes user authentication via name/email with per-user Gemini API key storage in Supabase (academic_users table). Dashboard shows today's schedule, upcoming tasks, and quick-access navigation. Desktop-first, responsive, minimalistic professional design. Backend uses Supabase for all data persistence. PWA (Progressive Web App) support planned so users can install the app on mobile and use it offline.",
   "architectural_notes": [
     "Sidebar or top navigation for clear module access (Chat, Timetable, Assignments, Dashboard)",
@@ -16,7 +16,8 @@
   ],
   "known_issues": [
     "Deployment error encountered; fix requested without rebuilding from scratch",
-    "IC0508 error: canister zh3qc-4iaaa-aaaai-q47va-cai is stopped; Chat.tsx is incorrectly routing Gemini calls through the ICP canister instead of calling Gemini REST API directly from frontend using @google/genai SDK"
+    "IC0508 error: canister zh3qc-4iaaa-aaaai-q47va-cai is stopped; Chat.tsx is incorrectly routing Gemini calls through the ICP canister instead of calling Gemini REST API directly from frontend using @google/genai SDK",
+    "Error occurs when adding tasks in the Assignments page; task creation is broken and needs diagnosis and fix"
   ],
   "isFixRequest": false,
   "existing_features": [
@@ -268,6 +269,102 @@
         "REQ-40"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-create-a-new-guide-page-at-frontend-src-pages-guide-tsx-the-page-must-contain-complete-usage-documentation-for-every-module-in-the-application-organized-into-clearly-labelled-sections-1-dashboard-explain-the-today-s-schedule-panel-upcoming-tasks-summary-and-quick-access-buttons-2-ai-chat-explain-how-to-use-the-chatbot-include-the-uploaded-screenshot-image-showing-the-google-ai-studio-api-keys-page-at-https-aistudio-google-com-api-keys-as-an-embedded-inline-image-and-display-a-prominent-clickable-link-get-your-gemini-api-key-here-https-aistudio-google-com-api-keys-with-instructions-to-paste-the-key-into-the-sidebar-api-key-field-3-timetable-ocr-upload-explain-the-drag-and-drop-image-upload-extraction-inline-editing-and-save-flow-4-timetable-manual-slots-explain-how-to-add-edit-and-delete-class-slots-in-the-weekly-grid-5-assignments-explain-the-task-list-filters-upcoming-completed-by-subject-add-edit-delete-and-mark-as-completed-6-day-tracker-explain-adding-hour-entries-with-hours-description-the-daily-summary-editing-and-deleting-entries-and-the-7-day-comparison-chart-each-section-must-use-a-card-layout-with-a-section-icon-heading-and-step-by-step-bullet-or-numbered-instructions-the-page-must-be-fully-responsive-and-consistent-with-the-existing-teal-slate-green-visual-theme",
+      "title": "Create a new Guide page at frontend/src/pages/Guide.tsx. The page must contain complete usage documentation for every module in the application, organized into clearly labelled sections: (1) Dashboard — explain the Today's Schedule panel, Upcoming Tasks summary, and Quick Access buttons; (2) AI Chat — explain how to use the chatbot, include the uploaded screenshot image (showing the Google AI Studio API Keys page at https://aistudio.google.com/api-keys) as an embedded inline image, and display a prominent clickable link 'Get your Gemini API Key here → https://aistudio.google.com/api-keys' with instructions to paste the key into the sidebar API key field; (3) Timetable (OCR Upload) — explain the drag-and-drop image upload, extraction, inline editing, and save flow; (4) Timetable (Manual Slots) — explain how to add, edit, and delete class slots in the weekly grid; (5) Assignments — explain the task list, filters (Upcoming / Completed / by Subject), Add/Edit/Delete, and Mark as Completed; (6) Day Tracker — explain adding hour entries with hours + description, the daily summary, editing and deleting entries, and the 7-day comparison chart. Each section must use a card layout with a section icon, heading, and step-by-step bullet or numbered instructions. The page must be fully responsive and consistent with the existing teal/slate-green visual theme.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-guide-navigation-link-to-the-sidebar-in-frontend-src-components-sidebar-tsx-place-it-among-the-existing-navigation-items-e-g-after-day-tracker-use-an-appropriate-icon-e-g-a-book-or-info-circle-icon-from-lucide-react-style-the-text-and-icon-in-white-consistent-with-all-other-sidebar-navigation-items-clicking-the-link-navigates-to-the-guide-route",
+      "title": "Add a 'Guide' navigation link to the sidebar in frontend/src/components/Sidebar.tsx. Place it among the existing navigation items (e.g., after Day Tracker). Use an appropriate icon (e.g., a book or info-circle icon from lucide-react). Style the text and icon in white, consistent with all other sidebar navigation items. Clicking the link navigates to the /guide route.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-register-the-guide-page-route-in-frontend-src-app-tsx-add-a-route-entry-for-the-path-guide-that-renders-the-guide-page-component-frontend-src-pages-guide-tsx-following-the-same-pattern-used-by-all-other-existing-routes-dashboard-chat-assignments-daytracker-etc",
+      "title": "Register the Guide page route in frontend/src/App.tsx. Add a route entry for the path /guide that renders the Guide page component (frontend/src/pages/Guide.tsx), following the same pattern used by all other existing routes (Dashboard, Chat, Assignments, DayTracker, etc.).",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-diagnose-and-fix-the-runtime-error-that-occurs-when-a-user-attempts-to-add-a-task-in-frontend-src-pages-assignments-tsx-inspect-the-add-task-flow-end-to-end-the-taskmodal-form-submission-handler-the-mutation-function-in-usequeries-ts-or-equivalent-and-how-tasks-are-written-to-localstorage-under-acadmind-tasks-resolve-any-type-errors-missing-fields-invalid-function-calls-or-broken-references-that-cause-the-addition-to-fail-silently-or-throw-an-error-ensure-that-after-the-fix-a-new-task-can-be-successfully-created-immediately-appears-in-the-task-list-and-a-success-toast-is-shown",
+      "title": "Diagnose and fix the runtime error that occurs when a user attempts to add a task in frontend/src/pages/Assignments.tsx. Inspect the add-task flow end-to-end: the TaskModal form submission handler, the mutation function in useQueries.ts (or equivalent), and how tasks are written to localStorage under 'acadmind_tasks'. Resolve any type errors, missing fields, invalid function calls, or broken references that cause the addition to fail silently or throw an error. Ensure that after the fix a new task can be successfully created, immediately appears in the task list, and a success toast is shown.",
+      "reqIds": [
+        "REQ-46"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-localstorage-persistence-layer-for-tasks-assignments-so-that-each-user-s-data-is-stored-under-a-user-specific-namespaced-key-rather-than-a-shared-global-key-the-key-must-incorporate-the-authenticated-user-s-unique-identifier-e-g-user-id-or-email-from-usercontext-for-example-acadmind-tasks-userid-or-acadmind-tasks-email-update-all-read-and-write-operations-in-frontend-src-hooks-usequeries-ts-or-wherever-localstorage-task-crud-is-implemented-to-derive-this-namespaced-key-from-the-current-user-in-usercontext-tasks-belonging-to-one-user-must-never-appear-when-a-different-user-is-logged-in-if-no-user-is-authenticated-fall-back-gracefully-e-g-show-an-empty-list",
+      "title": "Update the localStorage persistence layer for tasks/assignments so that each user's data is stored under a user-specific, namespaced key rather than a shared global key. The key must incorporate the authenticated user's unique identifier (e.g., user id or email from UserContext), for example 'acadmind_tasks_<userId>' or 'acadmind_tasks_<email>'. Update all read and write operations in frontend/src/hooks/useQueries.ts (or wherever localStorage task CRUD is implemented) to derive this namespaced key from the current user in UserContext. Tasks belonging to one user must never appear when a different user is logged in. If no user is authenticated, fall back gracefully (e.g., show an empty list).",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-the-same-user-specific-localstorage-namespacing-pattern-to-timetable-slots-and-day-tracker-entries-in-frontend-src-hooks-usequeries-ts-timetable-slots-must-be-stored-and-retrieved-under-a-key-like-acadmind-slots-userid-and-day-tracker-entries-under-acadmind-day-entries-userid-where-userid-is-derived-from-the-authenticated-user-s-unique-identifier-in-usercontext-all-existing-read-write-delete-operations-for-these-data-types-must-use-the-namespaced-key-data-from-one-user-must-not-be-visible-to-another-user",
+      "title": "Apply the same user-specific localStorage namespacing pattern to timetable slots and day tracker entries in frontend/src/hooks/useQueries.ts. Timetable slots must be stored and retrieved under a key like 'acadmind_slots_<userId>' and day tracker entries under 'acadmind_day_entries_<userId>', where '<userId>' is derived from the authenticated user's unique identifier in UserContext. All existing read/write/delete operations for these data types must use the namespaced key. Data from one user must not be visible to another user.",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-components-layout-tsx-update-the-footer-text-so-it-reads-2026-acadmind-built-by-nabeel-babar-do-not-modify-any-other-file",
+      "title": "In frontend/src/components/Layout.tsx, update the footer text so it reads '© 2026 AcadMind Built by Nabeel Babar'. Do not modify any other file.",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-save-the-uploaded-acadmind-cartoon-logo-image-image-1-png-as-static-icon-assets-at-frontend-public-assets-generated-icon-192x192-png-and-frontend-public-assets-generated-icon-512x512-png-resize-adapt-as-needed-for-each-resolution",
+      "title": "Save the uploaded AcadMind cartoon logo image (image-1.png) as static icon assets at frontend/public/assets/generated/icon-192x192.png and frontend/public/assets/generated/icon-512x512.png (resize/adapt as needed for each resolution).",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-index-html-to-set-the-browser-tab-favicon-to-the-uploaded-acadmind-logo-image-replace-or-add-a-link-rel-icon-tag-pointing-to-assets-generated-icon-192x192-png-and-an-link-rel-apple-touch-icon-tag-pointing-to-the-same-asset-so-it-also-appears-as-the-home-screen-icon-on-ios",
+      "title": "Update frontend/index.html to set the browser tab favicon to the uploaded AcadMind logo image. Replace or add a <link rel=\"icon\"> tag pointing to /assets/generated/icon-192x192.png and an <link rel=\"apple-touch-icon\"> tag pointing to the same asset so it also appears as the home screen icon on iOS.",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-contexts-usercontext-tsx-or-its-equivalent-update-the-app-startup-logic-so-that-when-no-authenticated-user-record-is-found-in-localstorage-key-acadmind-user-the-app-renders-a-full-screen-welcoming-landing-onboarding-page-instead-of-the-main-app-shell-this-page-must-be-the-very-first-thing-a-new-user-sees-it-should-overlay-or-replace-the-entire-viewport-and-not-allow-access-to-any-other-page-until-the-user-completes-sign-in",
+      "title": "In frontend/src/contexts/UserContext.tsx (or its equivalent), update the app startup logic so that when no authenticated user record is found in localStorage (key: 'acadmind_user'), the app renders a full-screen welcoming landing/onboarding page instead of the main app shell. This page must be the very first thing a new user sees — it should overlay or replace the entire viewport and not allow access to any other page until the user completes sign-in.",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-full-screen-welcome-onboarding-ui-component-e-g-frontend-src-components-welcomescreen-tsx-the-screen-must-display-1-the-acadmind-app-name-and-logo-prominently-2-a-warm-welcoming-headline-such-as-welcome-to-acadmind-and-a-short-descriptor-line-3-a-form-with-a-name-field-and-an-email-field-4-a-clearly-visible-get-started-primary-cta-button-on-submit-upsert-the-user-in-localstorage-under-acadmind-user-matching-existing-usercontext-logic-and-transition-to-the-dashboard-the-design-must-match-the-existing-teal-slate-green-visual-theme-consistent-with-tailwind-tokens-already-defined-in-tailwind-config-js-and-index-css-be-fully-responsive-and-feel-polished-and-professional",
+      "title": "Create a full-screen welcome/onboarding UI component (e.g., frontend/src/components/WelcomeScreen.tsx). The screen must display: (1) the AcadMind app name and logo prominently, (2) a warm, welcoming headline such as 'Welcome to AcadMind' and a short descriptor line, (3) a form with a 'Name' field and an 'Email' field, (4) a clearly visible 'Get Started' primary CTA button. On submit, upsert the user in localStorage under 'acadmind_user' (matching existing UserContext logic) and transition to the Dashboard. The design must match the existing teal/slate-green visual theme (consistent with Tailwind tokens already defined in tailwind.config.js and index.css), be fully responsive, and feel polished and professional.",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-daytracker-tsx-add-a-prominent-statistics-summary-panel-at-the-top-of-the-page-above-the-entry-list-that-displays-four-metrics-computed-from-the-user-s-day-tracker-entries-stored-in-localstorage-1-all-days-hours-the-total-sum-of-all-logged-hours-across-every-date-ever-recorded-2-this-week-hours-the-sum-of-logged-hours-for-entries-whose-date-falls-within-the-current-calendar-week-monday-to-sunday-3-today-hours-the-sum-of-logged-hours-for-entries-whose-date-matches-today-s-iso-date-and-4-today-minutes-the-equivalent-of-today-s-total-hours-expressed-in-minutes-e-g-2-5-hours-150-minutes-display-each-metric-in-its-own-card-with-a-clear-label-and-a-large-numeric-value-all-calculations-must-react-to-changes-in-the-entries-data-i-e-update-immediately-when-entries-are-added-edited-or-deleted-use-date-fns-or-dayjs-already-present-in-the-project-for-date-comparisons-and-week-boundary-calculations",
+      "title": "In frontend/src/pages/DayTracker.tsx, add a prominent statistics summary panel at the top of the page (above the entry list) that displays four metrics computed from the user's day tracker entries stored in localStorage: (1) 'All Days Hours' — the total sum of all logged hours across every date ever recorded, (2) 'This Week Hours' — the sum of logged hours for entries whose date falls within the current calendar week (Monday to Sunday), (3) 'Today Hours' — the sum of logged hours for entries whose date matches today's ISO date, and (4) 'Today Minutes' — the equivalent of today's total hours expressed in minutes (e.g., 2.5 hours → 150 minutes). Display each metric in its own card with a clear label and a large numeric value. All calculations must react to changes in the entries data (i.e., update immediately when entries are added, edited, or deleted). Use date-fns or dayjs (already present in the project) for date comparisons and week boundary calculations.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -434,6 +531,58 @@
     {
       "id": "AR-37",
       "summary": "On the OCR page, replace any 'No' or error text shown when user clicks the OCR/extract button with a 'Coming Soon' message instead",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-39",
+      "summary": "Add a 'Guide' section accessible via a sidebar navigation button. The guide should provide complete app usage instructions for each module/element. For the AI Chat section, include guidance with an uploaded/embedded image showing how to use the chatbot, and provide a direct link to obtain a Gemini API key: https://aistudio.google.com/api-keys",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-43",
+      "summary": "Save the uploaded Google AI Studio API Keys screenshot as a static asset at frontend/public/assets/generated/guide-api-keys-screenshot.png and reference it in the Guide page's AI Chat section using a standard <img> tag (or equivalent) pointing to /assets/generated/guide-api-keys-screenshot.png.",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-44",
+      "summary": "Fix error when adding tasks in the Assignments page. Ensure all user data (tasks/assignments) is stored in user-specific localStorage keys (namespaced by user id or email) so each user's data is isolated and does not bleed into another user's data.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-45",
+      "summary": "In the footer, change '© 2026 AcadMind — Built with ♥ using caffeine.ai' to '© 2026 AcadMind Built by Nabeel Babar' without modifying any other files",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-46",
+      "summary": "Use the user-provided image as the app icon (favicon) displayed in the browser tab and as the PWA/home screen icon",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-49",
+      "summary": "Update frontend/public/manifest.json to reference the new icon assets. Set the icons array to include entries for /assets/generated/icon-192x192.png (192×192, type image/png) and /assets/generated/icon-512x512.png (512×512, type image/png), replacing any previous placeholder icon paths.",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-50",
+      "summary": "Show a full-screen welcome/landing page prompting new users to enter their email on first visit. If user has previously signed in (stored in localStorage), skip this screen and go straight to the app.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-51",
+      "summary": "On the Day Tracker page, display a summary panel showing: total hours logged across all days, total hours logged for the current week, total hours logged today, and total minutes logged today",
       "reqIds": [],
       "status": "pending"
     }

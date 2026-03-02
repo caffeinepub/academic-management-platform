@@ -10,6 +10,7 @@ import TimetableUpload from './pages/TimetableUpload';
 import TimetableManual from './pages/TimetableManual';
 import Assignments from './pages/Assignments';
 import DayTracker from './pages/DayTracker';
+import Guide from './pages/Guide';
 import InstallBanner from './components/InstallBanner';
 
 const rootRoute = createRootRoute({
@@ -56,6 +57,12 @@ const dayTrackerRoute = createRoute({
   component: DayTracker,
 });
 
+const guideRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/guide',
+  component: Guide,
+});
+
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   chatRoute,
@@ -63,6 +70,7 @@ const routeTree = rootRoute.addChildren([
   timetableManualRoute,
   assignmentsRoute,
   dayTrackerRoute,
+  guideRoute,
 ]);
 
 const router = createRouter({ routeTree });
